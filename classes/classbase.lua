@@ -1015,7 +1015,9 @@ function base:rez()
 end
 
 function base:massRez()
+    state.paused = true
     healing.massRez()
+    state.paused = false
 end
 
 function base:managepet()
