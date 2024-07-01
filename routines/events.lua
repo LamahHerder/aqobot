@@ -37,6 +37,7 @@ function events.init(_class)
     mq.event('eventInterrupt', 'Your spell is interrupted#*#', events.interrupted)
     mq.event('eventInterruptedB', 'Your casting has been interrupted#*#', events.interrupted)
     mq.event('eventNotMemmed', 'You do not seem to have that spell memorized.', events.notMemorized)
+    mq.event('eventRampage', '#*# YOU for #*# points of damage. (Rampage)#*#', events.rampage)
 end
 
 function events.cantHit(line)
@@ -104,7 +105,7 @@ function events.zoned()
 end
 
 function events.movecloser()
-    if mode.currentMode:isAssistMode() and not state.paused then
+    if mode.currentMode:isAssistMode() and not state.paused and (mq.TLO.Target.PctHPs() or 200) < config.get('AUTOASSISTAT') then
         movement.navToTarget(nil, 1000)
     end
 end
@@ -164,15 +165,15 @@ function events.eventRequest(line, requester, requested)
         local tranquil = false
         local mgb = false
         if requested:find('^TRANQUIL') then
-            requested = requested:gsub('tranquil','')
+            requested = requested:gsub('TRANQUIL','')
             tranquil = true
         end
         if requested:find('^MGB') then
             requested = requested:gsub('MGB','')
             mgb = true
         end
-        if requested:find(' '..mq.TLO.Me.CleanName():lower()..'$') then
-            requested = requested:gsub(' '..mq.TLO.Me.CleanName():lower(),'')
+        if requested:find(' '..mq.TLO.Me.CleanName():upper()..'$') then
+            requested = requested:gsub(' '..mq.TLO.Me.CleanName():upper(),'')
         end
         if requested:find(' PET$') then
             requested = requested:gsub(' PET', '')
@@ -251,6 +252,10 @@ end
 
 function events.epicburn()
     class:useEpic()
+end
+
+function events.rampage()
+    state.rampTank = true
 end
 
 return events

@@ -241,6 +241,11 @@ Monk.Abilities = {
         Names={'Ecliptic Form', 'Composite Form', 'Dissident Form', 'Dichotomic Form'},
         Options={combatbuff=true}
     },
+    {
+        Type='Item',
+        Name='Blood Drinker\'s Coating',
+        Options={combatbuff=true, condition=function() return mq.TLO.Me.Buff('Five Point Palm Technique')() end}
+    },
 
     -- Defensives
     {
@@ -252,7 +257,7 @@ Monk.Abilities = {
     {
         Type='AA',
         Name='Imitate Death',
-        Options={fade=true, opt='USEFADE', postcast=function() mq.delay(1000) mq.cmd('/stand') mq.cmd('/makemevis') end}
+        Options={fade=true, opt='USEFADE', postcast=function() mq.delay(500) mq.cmd('/stand') mq.cmd('/makemevis') end}
     },
     {
         Type='Disc',

@@ -52,6 +52,9 @@ function camp.mobRadarB()
     state.mobCountNoPets = #state.targets
 end
 
+local aggressive_count = 'npc radius %d zradius 50 loc %d %d %d'
+local aggressive_spawn = '%d, npc radius %d zradius 50 loc %d %d %d'
+local aggressive_nopet_count = 'npc radius %d zradius 50 nopet loc %d %d %d'
 local xtar_count = 'xtarhater npc radius %d zradius 50 loc %d %d %d'
 local xtar_spawn = '%d, xtarhater npc radius %d zradius 50 loc %d %d %d'
 local xtar_nopet_count = 'xtarhater radius %d zradius 50 nopet loc %d %d %d'
@@ -65,18 +68,20 @@ function camp.mobRadar()
     else
         x, y, z = camp.X, camp.Y, camp.Z
     end
-    logger.debug(logger.flags.routines.camp, xtar_count:format(config.get('CAMPRADIUS') or 0, x, y, z))
-    state.mobCount = mq.TLO.SpawnCount(xtar_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
-    state.mobCountNoPets = mq.TLO.SpawnCount(xtar_nopet_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
+    logger.debug(logger.flags.routines.camp, aggressive_count:format(config.get('CAMPRADIUS') or 0, x, y, z))
+    state.mobCount = mq.TLO.SpawnCount(aggressive_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
+    -- state.mobCountNoPets = mq.TLO.SpawnCount(aggressive_nopet_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
+    state.mobCountNoPets = state.mobCount
     if state.mobCount > 0 then
         for i=1,state.mobCount do
-            if i > 13 then break end
-            logger.debug(logger.flags.routines.camp, xtar_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
-            local mob = mq.TLO.NearestSpawn(xtar_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
+            if i > 20 then break end
+            logger.debug(logger.flags.routines.camp, aggressive_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
+            local mob = mq.TLO.NearestSpawn(aggressive_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
             local mob_id = mob.ID()
             if mob_id and mob_id > 0 then
-                if not mob() or mob.Type() == 'Corpse' then
+                if not mob() or mob.Type() == 'Corpse' or not mob.Aggressive() or mob.Type() == 'Pet' then
                     state.targets[mob_id] = nil
+                    state.mobCountNoPets = state.mobCountNoPets - 1
                 elseif not state.targets[mob_id] then
                     logger.debug(logger.flags.routines.camp, 'Adding mob_id %d', mob_id)
                     state.targets[mob_id] = {Name=mob.CleanName()}
@@ -99,7 +104,7 @@ function camp.cleanTargets()
 end
 
 function camp.returnToCamp()
-    if helpers.distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), camp.X, camp.Y) > 15^2 then
+    if helpers.distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), camp.X, camp.Y) > config.get('CAMPRADIUS')^2 then
         movement.navToLoc(camp.X, camp.Y, camp.Z)
     end
 end
@@ -109,6 +114,7 @@ local checkCampTimer = timer:new(2000)
 function camp.checkCamp()
     if not mode.currentMode:isReturnToCampMode() or not camp.Active then return end
     if not checkCampTimer:expired() then return end
+    -- if mq.TLO.Me.CombatState() == 'COMBAT' or mq.TLO.Me.Combat() or mq.TLO.Me.AutoFire() then return end
     checkCampTimer:reset()
     if (state.class ~= 'BRD' and mq.TLO.Me.Casting()) then return end-- or not common.clearToBuff() then return end
     if mq.TLO.Zone.ID() ~= camp.ZoneID then

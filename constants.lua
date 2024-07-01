@@ -6,6 +6,7 @@ constants.commandHelp = {
     {command='show', tip='Display the UI window'},
     {command='hide', tip='Hide the UI window'},
     {command='save', tip='Save current settings'},
+    {command='restart', tip='Restart the script'},
     {command='mode [mode]', tip='Set the current mode of the script. Valid Modes:\n\t\t0|manual|1|assist|2|chase|3|vorpal|4|tank|5|pullertank|6|puller|7|huntertank'},
     {command='assistme', tip='Set the current target ID to the tank mob ID. Useful for manual mode to trigger tanking behavior'},
     {command='resetcamp', tip='Reset the centerpoint of the camp to your current X,Y,Z coordinates'},
@@ -25,19 +26,19 @@ constants.commandHelp = {
     {command='bark', tip='Make all group members repeat the following phrase'},
     {command='invis', tip='Use class invis ability'},
     {command='tribute', tip='Toggle personal tribute on or off'},
-    {command='sell', tip='Sells items marked to be sold to the targeted or already opened vendor'},
     {command='manastone', tip='Spam manastone to get some mana back'},
     {command='armpets', tip='Summon pet gear for configured pets'},
-    {command='debug', tip='Toggle the specified debug option on or off'},
-    {command='restart', tip='Restart the script'},
-    {command='update', tip='Downloads the latest source zip'},
-    {command='docs', tip='Launches the documentation site in a browser window'},
-    {command='wiki', tip='Launches the Lazarus wiki in a browser window'},
     {command='nowcast', tip='Tells the named character or yourself to cast a spell on the specified target ID.', example='/nowcast [name] alias <targetID>'},
     {command='blockspells', tip='Block common spells on self and pet'},
     {command='rez <name>', tip='Rez the specified character', example='/aqo rez sometank'},
+    {command='rebuff', tip='Cast buffs on command, ignoring combat checks'},
     {command='rezall', tip='Rez whole group or raid'},
+    {command='sell', tip='Sells items marked to be sold to the targeted or already opened vendor'},
+    {command='update', tip='Downloads the latest source zip'},
+    {command='docs', tip='Launches the documentation site in a browser window'},
+    {command='wiki', tip='Launches the Lazarus wiki in a browser window'},
     {command='baz', tip='Launches the Lazarus Bazaar in a browser window'},
+    {command='debug', tip='Toggle the specified debug option on or off'},
 }
 
 constants.bufflines = {
@@ -53,6 +54,7 @@ constants.bufflines = {
     {key='BRELLS', label='Brells (Paladin HP)', category='Standard', exclusivewith='STRENGTH,SV'},
     {key='SV', label='SV (Beast Lord HP)', category='Standard', exclusivewith='BRELLS,STRENGTH'},
     {key='SE', label='SE (Beast Lord Regen)', category='Standard'},
+    {key='VIGOR', label='Feral Vigor', category='Standard'},
     -- {key='REGEN', label='Regen', category='Standard'},
     -- Stat Buffs
     {key='CHAMPION', label='Champion (Shm)', category='Stats'},
@@ -67,14 +69,16 @@ constants.bufflines = {
     -- Utility Buffs
     {key='DMF', label='Dead Man Floating', category='Utility'},
     {key='DS', label='Damage Shield', category='Utility'},
-    -- Proc Buffs
-    {key='NECROTIC', label='Necro Damage Proc', category='Procs'},
-    {key='REPTILE', label='Druid Heal Proc', category='Procs'},
-    {key='VIE', label='Vie', category='Procs'},
-    {key='DI', label='Divine Intervention', category='Procs'},
-    {key='RUNE', label='Rune', category='Procs'},
-    {key='MANAPROC', label='Mana DD Proc (Enchanter)', category='Procs'},
-    {key='SLOWPROC', label='Slow Proc', category='Procs'},
+    -- Short Term Buffs
+    {key='NECROTIC', label='Necro Damage Proc', category='Short Term Buffs'},
+    {key='REPTILE', label='Druid Heal Proc', category='Short Term Buffs'},
+    {key='VIE', label='Vie', category='Short Term Buffs'},
+    {key='DI', label='Divine Intervention', category='Short Term Buffs'},
+    {key='RUNE', label='Rune', category='Short Term Buffs'},
+    {key='MANAPROC', label='Mana DD Proc (Enchanter)', category='Short Term Buffs'},
+    {key='SLOWPROC', label='Slow Proc', category='Short Term Buffs'},
+    {key='TEMPDS', label='Temporary Damage Shield', category='Short Term Buffs'},
+    {key='FPARAGON', label='Focused Paragon', category='Short Term Buffs'},
     -- Resist Buffs
     {key='RESFIRE', label='Resist Fire', category='Resists'},
     {key='RESCOLD', label='Resist Cold', category='Resists'},
@@ -83,7 +87,7 @@ constants.bufflines = {
     {key='RESCORR', label='Resist Corruption', category='Resists'},
     {key='RESMAGIC', label='Resist Magic', category='Resists'},
 }
-constants.buffcategories = {'Standard','Stats','Utility','Procs','Resists'}
+constants.buffcategories = {'Standard','Stats','Utility','Short Term Buffs','Resists'}
 -- Class buff beg defaults
 constants.buffs = {
     BER = {
@@ -165,11 +169,12 @@ constants.buffs = {
         BRELLS = true,
         SHOUT = false,
         SV = false,
-        FOCUS = true,
+        FOCUS = false,
         NECROTIC = true,
         REPTILE = true,
         DMF = true,
         DS = true,
+        FPARAGON = true,
     },
     DRU = {
         SE = true,
@@ -182,6 +187,7 @@ constants.buffs = {
         FOCUS = true,
         NECROTIC = true,
         DMF = true,
+        FPARAGON = true,
     },
     SHM = {
         SE = true,
@@ -197,6 +203,7 @@ constants.buffs = {
         REPTILE = true,
         DMF = true,
         DS = true,
+        FPARAGON = true,
     },
 
     PAL = {
@@ -217,6 +224,10 @@ constants.buffs = {
         SLOWPROC = true,
         CHAMPION = true,
         WOLF = true,
+        TEMPDS = true,
+        FPARAGON = true,
+        VIGOR = true,
+        CHA = true,
     },
     SHD = {
         AEGO = true,
@@ -237,6 +248,10 @@ constants.buffs = {
         SLOWPROC = true,
         CHAMPION = true,
         WOLF = true,
+        TEMPDS = true,
+        FPARAGON = true,
+        VIGOR = true,
+        CHA = true,
     },
     WAR = {
         AEGO = false,
@@ -259,6 +274,9 @@ constants.buffs = {
         SLOWPROC = true,
         CHAMPION = true,
         WOLF = true,
+        TEMPDS = true,
+        VIGOR = true,
+        CHA = true,
     },
 
     ENC = {
@@ -319,6 +337,7 @@ constants.buffs = {
         NECROTIC = true,
         REPTILE = true,
         DMF = true,
+        FPARAGON = true,
     },
 
     BST = {
@@ -363,10 +382,12 @@ constants.durationHealClickies = {
     'Distillate of Celestial Healing X',
 }
 constants.ddClickies = {
+    'Blazing Void Orb',
     'Molten Orb',
     'Lava Orb',
 }
 constants.deleteWhenDead = {
+    ['Blazing Void Orb']=true,
     ['Molten Orb']=true,
     ['Lava Orb']=true,
     ['Sanguine Mind Crystal III']=true,
@@ -387,6 +408,7 @@ constants.meleeClasses = {BER=true,BRD=true,BST=true,MNK=true,RNG=true,ROG=true}
 constants.nukeClasses = {BST=true,CLR=true,DRU=true,ENC=true,MAG=true,NEC=true,RNG=true,SHM=true,WIZ=true}
 constants.dotClasses = {BST=true,DRU=true,ENC=true,NEC=true,RNG=true,SHD=true,SHM=true}
 constants.fdClasses = {MNK=true,NEC=true,SHD=true,BST=true}
+constants.intClasses = {ENC=true,MAG=true,NEC=true,WIZ=true}
 
 constants.DMZ = {
     [344] = 1,
@@ -415,7 +437,7 @@ constants.ignoreBuff = {
     ['HC Defense of Calrena']=true,
 }
 
-constants.burns = {first=1,second=1,third=1,quick=1,long=1}
+constants.burns = {first=1,second=1,third=1,quick=1,long=1,epicburn=1}
 
 constants.slotList = 'earrings, rings, leftear, rightear, leftfinger, rightfinger, face, head, neck, shoulder, chest, feet, arms, leftwrist, rightwrist, wrists, charm, powersource, mainhand, offhand, ranged, ammo, legs, waist, hands'
 

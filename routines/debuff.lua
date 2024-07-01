@@ -18,6 +18,8 @@ function debuff.shouldUseDebuff(ability)
     if ability.opt == 'USEDISPEL' then
         local beneficial = mq.TLO.Target.Beneficial
         return beneficial() and beneficial.Dispellable() and not constants.ignoreBuff[beneficial()]
+    elseif ability.opt == 'USECRIPPLE' then
+        return mq.TLO.Target() and mq.TLO.Target.Named()
     elseif ability.opt == 'USESLOWAOE' or ability.opt == 'USESLOW' then
         return mq.TLO.Target() and not mq.TLO.Target.Slowed() and not debuff.SLOW_IMMUNES[mq.TLO.Target.CleanName()]
     elseif ability.opt == 'USESNARE' then
@@ -40,7 +42,7 @@ function debuff.findNextDebuff(opt, targetID)
     end
 end
 
-local debuffTypeMap = {Dispel='USEDISPEL',DebuffAOE='USEDEBUFFAOE',Debuff='USEDEBUFF',SlowAOE='USESLOWAOE',Slow='USESLOW',Snare='USESNARE'}
+local debuffTypeMap = {Dispel='USEDISPEL',DebuffAOE='USEDEBUFFAOE',Debuff='USEDEBUFF',SlowAOE='USESLOWAOE',Slow='USESLOW',Cripple='USECRIPPLE',Snare='USESNARE'}
 function debuff.castDebuffs()
     -- if mq.TLO.Target.Type() ~= 'NPC' or not mq.TLO.Target.Aggressive() then return end
     for _,debuffType in ipairs(class.debuffOrder) do

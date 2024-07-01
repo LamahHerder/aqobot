@@ -165,7 +165,8 @@ function common.hostileXTargets()
 end
 
 function common.clearToBuff()
-    return mq.TLO.Me.CombatState() ~= 'COMBAT' and not common.hostileXTargets() and not common.amIDead() and not state.forceEngage
+    -- return mq.TLO.Me.CombatState() ~= 'COMBAT' and not common.hostileXTargets() and not common.amIDead() and not state.forceEngage
+    return mq.TLO.Me.CombatState() ~= 'COMBAT' and not mq.TLO.Spawn('npc radius '..config.get('CAMPRADIUS')).Aggressive() and not common.amIDead() and not state.forceEngage
 end
 
 function common.isFightingModeBased()
@@ -351,10 +352,11 @@ function common.checkMana()
         abilities.use(abilities.Item:new({Name=feather(), ID=feather.ID()}))
     end
 
-    if mq.TLO.Zone.ShortName() ~= 'poknowledge' and mq.TLO.Me.MaxMana() > 0 then
+    local zonesn = mq.TLO.Zone.ShortName()
+    if zonesn ~= 'poknowledge' and zonesn ~= 'thevoida' and mq.TLO.Me.MaxMana() > 0 then
         local manastone = mq.TLO.FindItem('Manastone')
         if manastone() and mq.TLO.Me.PctMana() < config.get('MANASTONESTART') and mq.TLO.Me.PctHPs() > config.get('MANASTONESTARTHP') then
-            local manastoneTimer = timer:new((config.get('MANASTONETIME') or 0)*1000, true)
+            local manastoneTimer = timer:new((config.get('MANASTONETIME') or 0)*1000)
             while mq.TLO.Me.PctHPs() > config.get('MANASTONESTOPHP') and not manastoneTimer:expired() do
                 mq.cmd('/useitem manastone')
             end

@@ -279,8 +279,13 @@ Warrior.Abilities = {
     },
     {
         Type='Skill',
+        Name='Bash',
+        Options={dps=true, condition=function() return mq.TLO.Me.Inventory('offhand').Type() == 'Shield' and conditions.withinMeleeDistance() end}
+    },
+    {
+        Type='Skill',
         Name='Kick',
-        Options={dps=true, condition=conditions.withinMeleeDistance}
+        Options={dps=true, condition=function() return mq.TLO.Me.Inventory('offhand').Type() ~= 'Shield' and conditions.withinMeleeDistance() end}
     },
     {
         Type='Disc',

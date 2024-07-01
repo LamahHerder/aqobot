@@ -91,7 +91,7 @@ local Magician = class:new()
     'monster', {'Monster Summoning XV', 'Monster Summoning XIV', 'Monster Summoning XIII', 'Monster Summoning XII', 'Monster Summoning XI'}
 ]]
 function Magician:init()
-    self.classOrder = {'assist', 'mash', 'debuff', 'cast', 'burn', 'heal', 'recover', 'managepet', 'buff', 'rest', 'rez'}
+    self.classOrder = {'assist', 'mash', 'aggro', 'debuff', 'burn', 'cast', 'heal', 'recover', 'managepet', 'buff', 'rest', 'rez'}
     self.spellRotations = {standard={},custom={}}
     self:initBase('MAG')
 
@@ -198,12 +198,12 @@ Magician.SpellLines = {
         Group='spear',
         NumToPick=2,
         Spells={'Spear of Molten Dacite', 'Spear of Molten Luclinite', 'Spear of Molten Komatiite', 'Spear of Molten Arcronite', 'Spear of Molten Shieldstone', --[[emu cutoff]] 'Spear of Ro', 'Sun Vortex', 'Seeking Flame of Seukor', 'Char', 'Cinder Bolt', 'Blaze', 'Bolt of Flame', 'Shock of Flame', 'Flame Bolt', 'Burn', 'Burst of Flame'},
-        Options={opt='USEFIRENUKES', Gems={function() return not Magician:isEnabled('USEAOE') and 1 or nil end,2}}
+        Options={opt='USEFIRENUKES', Gems={1, function(lvl) return not Magician:isEnabled('USEAOE') and 2 or nil end}, precast=function() if mq.TLO.FindItem('Bifold Focus of the Evil Eye')() and mq.TLO.Me.ItemReady('Bifold Focus of the Evil Eye')() then mq.cmd('/useitem "Bifold Focus of the Evil Eye"') end end}
     },
     {-- Main AE nuke. Slot 1
         Group='beam',
         Spells={'Beam of Molten Dacite', 'Beam of Molten Olivine', 'Beam of Molten Komatiite', 'Beam of Molten Rhyolite', 'Beam of Molten Shieldstone', --[[emu cutoff]] 'Column of Fire', 'Fire Flux'},
-        Options={opt='USEAOE', Gem=1}
+        Options={opt='USEAOE', threshold=2, Gem=function(lvl) return lvl >= 100 and 2 or nil end}
     },
     {-- Strong elemental temporary pet summon. Slot 3
         Group='servant',
@@ -228,32 +228,32 @@ Magician.SpellLines = {
     {-- Summons clicky nuke orb with 10 charges. Slot 7
         Group='orb',
         Spells={'Summon Molten Komatiite Orb', 'Summon Firebound Orb', --[[emu cutoff]] 'Summon: Molten Orb', 'Summon: Lava Orb'},
-        Options={Gem=7, summonMinimum=1, nodmz=true, pause=true, alias='NUKEORB', selfbuff=true}
+        Options={Gem=7, summonMinimum=1, nodmz=true, pause=true, alias='NUKEORB', selfbuff=true, condition=function() return not mq.TLO.FindItem('Glyphwielder\'s Eternal Bracer')() end}
     },
     {-- Large DS 10 minutes. Slot 8
         Group='veilds',
         Spells={'Igneous Veil', 'Volcanic Veil', 'Exothermic Veil', 'Skyfire Veil', --[[emu cutoff]]},
-        Options={opt='USEVEILDS', Gem=8}
+        Options={opt='USEVEILDS', Gem=function(lvl) return lvl >= 100 and 9 or nil end}
     },
     {-- Regular group DS. Slot 9
         Group='groupds',
         Spells={'Circle of Forgefire Coat', 'Circle of Emberweave Coat', 'Circle of Igneous Skin', 'Circle of the Inferno', 'Circle of Flameweaving', --[[emu cutoff]] 'Circle of Brimstoneskin', 'Circle of Fireskin'},
-        Options={opt='USEDS', Gem=function() return not Magician:isEnabled('USESKINDS') and 9 or nil end, alias='DS'}
+        Options={opt='USEDS', Gem=function() return not Magician:isEnabled('USESKINDS') and 8 or nil end, alias='DS'}
     },
     {-- 30 seconds, 4 charges large DS. Slot 9
         Group='skinds',
         Spells={'Boiling Skin', 'Scorching Skin', 'Burning Skin', 'Blistering Skin', 'Corona Skin', --[[emu cutoff]]},
-        Options={opt='USESKINDS', Gem=9}
+        Options={opt='USESKINDS', Gem=8}
     },
     {-- Twincast next spell. Slot 10
         Group='twincast',
         Spells={'Twincast'},
-        Options={Gem=10}
+        Options={Gem=10, first=true}
     },
     {-- Recover mana, long cast time. Slot 11
         Group='gather',
         Spells={'Gather Zeal', 'Gather Vigor', 'Gather Potency', 'Gather Capability'},
-        Options={Gem=11}
+        Options={Gem=11, recover=true}
     },
     {-- Strong pet buff. Slot 12
         Group='composite',
@@ -274,7 +274,7 @@ Magician.SpellLines = {
     {
         Group='shield',
         Spells={'Shield of Inescapability', 'Shield of Inevitability', 'Shield of Destiny', 'Shield of Order', 'Shield of Consequence', --[[emu cutoff]] 'Elemental Aura'},
-        Options={selfbuff=true}
+        Options={selfbuff=true, condition=function() return not mq.TLO.FindItem('Glyphwielder\'s Sleeves of the Summoner')() end}
     },
     {
         Group='minion',
@@ -321,7 +321,7 @@ Magician.SpellLines = {
     {
         Group='petbuff',
         Spells={'Burnout XVI', 'Burnout XV', 'Burnout XIV', 'Burnout XIII', 'Burnout XII', --[[emu cutoff]] 'Elemental Fury', 'Burnout V', 'Burnout IV', 'Burnout III', 'Burnout II', 'Burnout'},
-        Options={petbuff=true}
+        Options={petbuff=true, condition=function() return not mq.TLO.FindItem('Glyphwielder\'s Leggings of the Summoner')() end}
     },
     {
         Group='petds',
@@ -357,7 +357,7 @@ Magician.SpellLines = {
 
     -- old emu stuff
     {Group='petstrbuff', Spells={'Rathe\'s Strength', 'Earthen Strength'}, Options={skipifbuff='Champion', petbuff=true, Checkfor='Rathe\'s Strength Effect'}},
-    {Group='bigds', Spells={'Frantic Flames', 'Pyrilen Skin', 'Burning Aura'}, Options={opt='USETEMPDS', singlebuff=true, classes={WAR=true,SHD=true,PAL=true}}},
+    {Group='bigds', Spells={'Frantic Flames', 'Pyrilen Skin', 'Burning Aura'}, Options={opt='USETEMPDS', alias='TEMPDS', singlebuff=true, classes={WAR=true,SHD=true,PAL=true}, Gem=function(lvl) return lvl <= 70 and 9 or nil end}},
     -- Chance to increase spell power of next nuke
     {Group='prenuke', Spells={'Fickle Conflagration', --[[emu cutoff]] 'Fickle Fire'}, Options={opt='USEFIRENUKES'}},
 
@@ -383,11 +383,11 @@ Magician.SpellLines = {
     -- magic nuke + malo
     {Group='magicmalonuke', Spells={'Memorial Steel Malosinera', 'Carbide Malosinetra', 'Burning Malosinara', 'Arcronite Malosinata', 'Darksteel Malosenete'}, Options={opt='USEMAGICNUKES'}},
     -- targeted AE fire rain
-    {Group='firerain', Spells={'Rain of Molten Dacite', 'Rain of Molten Olivine', 'Rain of Molten Komatiite', 'Rain of Molten Rhyolite', 'Coronal Rain', 'Rain of Lava', 'Rain of Fire'}, Options={opt='USEAOE', Gem=function(lvl) return lvl <= 60 and 4 or nil end}},
+    {Group='firerain', Spells={'Rain of Molten Dacite', 'Rain of Molten Olivine', 'Rain of Molten Komatiite', 'Rain of Molten Rhyolite', 'Coronal Rain', --[[emu cutoff]] 'Rain of Jerikor', 'Rain of Lava', 'Rain of Fire'}, Options={opt='USEAOE', threshold=2, Gem=function(lvl) return (lvl == 70 and 2) or (lvl <= 60 and 4) or nil end}},
     -- targeted AE magic rain
-    {Group='magicrain', Spells={'Rain of Kukris', 'Rain of Falchions', 'Rain of Scimitars', 'Rain of Knives', 'Rain of Cutlasses', 'Rain of Spikes', 'Rain of Blades'}, Options={opt='USEAOE', Gem=function(lvl) return lvl <= 60 and 5 or nil end}},
-    {Group='pbaefire', Spells={'Fiery Blast', 'Flaming Blast', 'Burning Blast', 'Searing Blast', 'Flame Flux'}, Options={opt='USEAOE'}},
-    {Group='frontalmagic', Spells={'Beam of Kukris', 'Beam of Falchions', 'Beam of Scimitars', 'Beam of Knives'}, Options={opt='USEAOE'}},
+    {Group='magicrain', Spells={'Rain of Kukris', 'Rain of Falchions', 'Rain of Scimitars', 'Rain of Knives', 'Rain of Cutlasses', --[[emu cutoff]] 'Star Scream', 'Rain of Spikes', 'Rain of Blades'}, Options={opt='USEAOE', threshold=2, Gem=function(lvl) return (lvl == 70 and 10) or (lvl <= 60 and 5) or nil end}},
+    {Group='pbaefire', Spells={'Fiery Blast', 'Flaming Blast', 'Burning Blast', 'Searing Blast', 'Flame Flux'}, Options={opt='USEAOE', threshold=4}},
+    {Group='frontalmagic', Spells={'Beam of Kukris', 'Beam of Falchions', 'Beam of Scimitars', 'Beam of Knives'}, Options={opt='USEAOE', threshold=4}},
     -- pet promised heal
     {Group='pethealpromise', Spells={'Promised Reconstitution', 'Promised Relief', 'Promised Healing', 'Promised Alleviation', 'Promised Invigoration'}, Options={opt='HEALPET'}},
     -- random chance to heal all pets in area
@@ -412,6 +412,11 @@ Magician.Abilities = {
         Type='AA',
         Name='Force of Elements',
         Options={dps=true}
+    },
+    {
+        Type='Item',
+        Name='Glyphwielder\'s Eternal Bracer',
+        Options={alias='NUKEORB2', summonMinimum=1, nodmz=true, pause=true, selfbuff=true,}
     },
 
     -- Burns
@@ -465,12 +470,12 @@ Magician.Abilities = {
     {
         Type='Item',
         Name='Focus of Primal Elements',
-        Options={first=true, CheckFor='Elemental Conjunction'}
+        Options={first=true, epicburn=true, CheckFor='Elemental Conjunction'}
     },
     {
         Type='Item',
         Name='Staff of Elemental Essence',
-        Options={first=true, CheckFor='Elemental Conjunction'}
+        Options={first=true, epicburn=true, CheckFor='Elemental Conjunction'}
     },
     {
         Type='AA',
@@ -505,6 +510,8 @@ function Magician:initSpellRotations()
     table.insert(self.spellRotations.standard, self.spells.ofmany)
     table.insert(self.spellRotations.standard, self.spells.chaotic)
     table.insert(self.spellRotations.standard, self.spells.shock)
+    table.insert(self.spellRotations.standard, self.spells.magicrain)
+    table.insert(self.spellRotations.standard, self.spells.firerain)
     table.insert(self.spellRotations.standard, self.spells.spear1)
     table.insert(self.spellRotations.standard, self.spells.spear2)
     table.insert(self.spellRotations.standard, self.spells.beam)

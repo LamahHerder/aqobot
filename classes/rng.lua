@@ -386,7 +386,7 @@ Ranger.Abilities = {
     {
         Type='AA',
         Name='Cover Tracks',
-        Options={fade=true, opt='USEFADE', postcast=function() mq.delay(500) mq.cmd('/makemevis') end}
+        Options={fade=true, opt='USEFADE', postcast=function() mq.delay(1000) mq.cmd('/makemevis') end}
     },
 }
 

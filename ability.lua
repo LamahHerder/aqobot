@@ -273,6 +273,7 @@ function Ability.use(theAbility, class, doSwap, skipShouldUseCheck)
     -- ability has no condition or condition is met
     -- ability has no associated config option or the config option is enabled
     -- ability is enabled (only applies to clickies)
+    if theAbility.opt == 'USEDOTS' and class and class:isEnabled('DOTNAMEDONLY') and not mq.TLO.Target.Named() then return result end
     if (isReady == IsReady.SHOULD_CAST or (isReady == IsReady.NOT_MEMMED and doSwap)) and (not theAbility.condition or theAbility:condition()) and (not class or class:isAbilityEnabled(theAbility.opt)) and (theAbility.enabled == nil or theAbility.enabled) then
         if theAbility.CastType == AbilityTypes.Spell and doSwap and not mq.TLO.Me.Gem(theAbility.CastName)() then
             -- swappings enabled for this spell so memorize it so it can be cast
@@ -294,6 +295,8 @@ function Ability.use(theAbility, class, doSwap, skipShouldUseCheck)
                         end
                     end
                 end
+                state.queuedActionTimer:reset()
+                state.queuedActionTimer.expiration = 10000
                 result = true
             else
                 result = theAbility:execute()
@@ -302,6 +305,8 @@ function Ability.use(theAbility, class, doSwap, skipShouldUseCheck)
                         if mq.TLO.Me.SpellInCooldown() then return state.queuedAction end
                         theAbility.postcast()
                     end
+                    state.queuedActionTimer:reset()
+                    state.queuedActionTimer.expiration = 10000
                 end
             end
         end
@@ -627,6 +632,8 @@ function Ability.swapAndCast(spell, gem, class, skipReadyCheck)
                 end
             end
         end
+        state.queuedActionTimer:reset()
+        state.queuedActionTimer.expiration = 30000
         return true
     else
         return Ability.use(spell, class)

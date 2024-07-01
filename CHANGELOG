@@ -1,3 +1,36 @@
+# 2024/07/01
+- DOTNAMEDONLY check for all classes
+- Add /aqo burnnow epicburn
+- Ber bewildering scream as burn instead of dps
+- Fix brd 3rd spire
+- Move paragon to buff beg logic
+- More clicky types, summon, defensive, mana
+- Don't immediately use mash or class clickies at 100% hp
+- Add /aqo preburn
+- Allow attacking pets
+- Add heal clickies into lifesupport
+- Use defensive clickies or fades on rampage damage
+- Add divine peace fade for clerics
+- Add rain nuke for druids
+- Enchanter spell updates and move to common findNextSpell routine
+- Mage spell updates
+- Pal spell/burn updates
+- Rog burn updates
+- Shm spell updates, add swarm pet aa to burn
+- ClearToBuff check based on nearby aggressive NPC instead of xtarhaters
+- No manastone in fippy raid instance (laz)
+- Add muggers sap for brd/rog (laz)
+- Add more spells to buff beg
+- Attempt /reload if multiple corpses to avoid cant loot bugs
+- Move manastone to main loop
+- Add /aqo blockspells for blocking common spells on self/pet
+- Add /aqo rebuff to force using clickies in combat after rezzing
+- Add /aqo rezall to do nothing but loop through rezzing nearby corpses
+- Assist updates for attacking pets, check nearby .Aggressive instead of xtargets
+- Disable stick when target switching in assist
+- Add USECRIPPLE check to debuff routine
+- Add extra target below assist percent checks
+
 # 2024/05/18
 - Add bard options USEJONTHANS, USEAMPLIFICATION
 - Update ability init to check more than first 5 spell slots for various SPAs

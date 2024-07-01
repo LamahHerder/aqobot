@@ -26,7 +26,7 @@ local BeastLord = class:new()
     Sympathetic Warder
 ]]
 function BeastLord:init()
-    self.classOrder = {'assist', 'aggro', 'debuff', 'cast', 'recover', 'mash', 'burn', 'heal', 'buff', 'rest', 'managepet', 'rez'}
+    self.classOrder = {'assist', 'aggro', 'debuff', 'burn', 'cast', 'recover', 'mash', 'heal', 'buff', 'rest', 'managepet', 'rez'}
     self.spellRotations = {standard={},custom={}}
     self:initBase('BST')
 
@@ -36,6 +36,7 @@ function BeastLord:init()
     self:initSpellRotations()
     self:initAbilities()
     self:addCommonAbilities()
+    state.swapGem = 12
 
     self.useCommonListProcessor = true
 end
@@ -139,7 +140,7 @@ BeastLord.SpellLines = {
         Group='lance',
         NumToPick=2,
         Spells={'Ankexfen Lance', 'Crystalline Lance', 'Restless Lance', 'Frostbite Lance', 'Kromtus Lance', 'Kromrif Lance', 'Frostrift Lance', 'Glacial Lance', 'Glacier Spear', --[[emu cutoff]] 'Ice Spear'},
-        Options={opt='USENUKES', Gems={4,5}}
+        Options={opt='USENUKES', Gems={4, function(lvl) return lvl > 70 and 5 or nil end}}
     },
     {-- AOE DD
         Group='roar',
@@ -194,7 +195,7 @@ BeastLord.SpellLines = {
     {-- Player heal / Salve of Artikla (Pet heal) Slot 13. Slot 7 if use alliance
         Group='heal',
         Spells={'Thornhost\'s Mending', 'Korah\'s Mending', 'Bethun\'s Mending', 'Deltro\'s Mending', 'Sabhattin\'s Mending', 'Jaerol\'s Mending', 'Yurv\'s Mending', 'Wilap\'s Mending', --[[emu cutoff]] 'Muada\'s Mending', 'Trushar\'s Mending', 'Healing', 'Light Healing', 'Minor Healing', 'Salve'},
-        Options={opt='USEMENDING', Gem=function(lvl) return (lvl <= 70 and 5) or (not BeastLord:isEnabled('USEALLIANCE') and 13) or 7 end, me=75, self=true, heal=true}
+        Options={opt='USEMENDING', Gem=function(lvl) return (lvl <= 70 and 11) or (not BeastLord:isEnabled('USEALLIANCE') and 13) or 7 end, me=75, self=true, heal=true}
     },
     {-- adds extra damage to bst dots + fulmination. Slot 13
         Group='alliance',
@@ -216,7 +217,7 @@ BeastLord.SpellLines = {
     {Group='petaggression', Spells={'Magna\'s Aggression', 'Panthea\'s Aggression', 'Horasug\'s Aggression', 'Virzak\'s Aggression', 'Sekmoset\'s Aggression', 'Plakt\'s Aggression', 'Mea\'s Aggression', 'Neivr\'s Aggression', --[[emu cutoff]] }, Options={swap=true}},
     {Group='petshrink', Spells={'Tiny Companion'}, Options={}},
 
-    {Group='regen', Spells={'Feral Vigor'}, Options={classes={WAR=true,SHD=true,PAL=true}}}, -- single regen
+    {Group='regen', Spells={'Feral Vigor'}, Options={alias='VIGOR', Gem=function(lvl) return lvl <= 70 and 5 end, classes={WAR=true,SHD=true,PAL=true}}}, -- single regen
     {
         Group='groupunity',
         Spells={'Wildfang\'s Unity', 'Chieftain\'s Unity', 'Reclaimer\'s Unity', 'Feralist\'s Unity', 'Stormblood\'s Unity'},
@@ -463,12 +464,12 @@ BeastLord.Abilities = {
     {
         Type='Item',
         Name='Spiritcaller Totem of the Feral',
-        Options={first=true, CheckFor='Might of the Wild Spirits', condition=conditions.missingPetCheckFor}
+        Options={first=true, epicburn=true, CheckFor='Might of the Wild Spirits', condition=conditions.missingPetCheckFor}
     },
     {
         Type='Item',
         Name='Savage Lord\'s Totem',
-        Options={first=true, CheckFor='Might of the Wild Spirits', condition=conditions.missingPetCheckFor}
+        Options={first=true, epicburn=true, CheckFor='Might of the Wild Spirits', condition=conditions.missingPetCheckFor}
     },
     {
         Type='AA',
@@ -527,24 +528,24 @@ function BeastLord:recoverClass()
             self.paragon:use()
         end
     end
-    local originalTargetID = mq.TLO.Target.ID()
-    if self:isEnabled('PARAGONOTHERS') and self.fParagon then
-        local groupSize = mq.TLO.Group.GroupSize()
-        if groupSize then
-            for i=1,groupSize do
-                local member = mq.TLO.Group.Member(i)
-                local memberPctMana = member.PctMana() or 100
-                local memberDistance = member.Distance3D() or 300
-                local memberClass = member.Class.ShortName() or 'WAR'
-                if constants.manaClasses[memberClass] and memberPctMana < 70 and memberDistance < 100 and mq.TLO.Me.AltAbilityReady(self.fParagon.Name)() then
-                    member.DoTarget()
-                    self.fParagon:use()
-                    if originalTargetID > 0 then mq.cmdf('/squelch /mqtar id %s', originalTargetID) else mq.cmd('/squelch /mqtar clear') end
-                    return
-                end
-            end
-        end
-    end
+    -- local originalTargetID = mq.TLO.Target.ID()
+    -- if self:isEnabled('PARAGONOTHERS') and self.fParagon then
+    --     local groupSize = mq.TLO.Group.GroupSize()
+    --     if groupSize then
+    --         for i=1,groupSize do
+    --             local member = mq.TLO.Group.Member(i)
+    --             local memberPctMana = member.PctMana() or 100
+    --             local memberDistance = member.Distance3D() or 300
+    --             local memberClass = member.Class.ShortName() or 'WAR'
+    --             if constants.manaClasses[memberClass] and memberPctMana < 70 and memberDistance < 100 and mq.TLO.Me.AltAbilityReady(self.fParagon.Name)() then
+    --                 member.DoTarget()
+    --                 self.fParagon:use()
+    --                 if originalTargetID > 0 then mq.cmdf('/squelch /mqtar id %s', originalTargetID) else mq.cmd('/squelch /mqtar clear') end
+    --                 return
+    --             end
+    --         end
+    --     end
+    -- end
 end
 
 return BeastLord

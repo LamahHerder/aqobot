@@ -48,7 +48,7 @@ local Paladin = class:new()
     Stance
 ]]
 function Paladin:init()
-    self.classOrder = {'tank', 'assist', 'heal', 'cast', 'mash', 'burn', 'recover', 'buff', 'rest'}
+    self.classOrder = {'assist', 'heal', 'cast', 'mash', 'burn', 'recover', 'buff', 'rest'}
     self.spellRotations = {standard={},custom={}}
     self:initBase('PAL')
 
@@ -72,12 +72,12 @@ end
 Paladin.SpellLines = {
     {
         Group='stun1',
-        Spells={'Force of Marr', --[[emu cutoff]] 'Stun', 'Desist', 'Cease'},
+        Spells={'Force of Marr', --[[emu cutoff]] 'Ancient: Force of Jeron', 'Force of Piety', 'Stun', 'Desist', 'Cease'},
         Options={Gem=1},
     },
     {
         Group='stun2',
-        Spells={'Earnest Force'},
+        Spells={'Earnest Force', --[[emu cutoff]] --[['Serene Command']]},
         Options={Gem=2},
     },
     {
@@ -86,9 +86,19 @@ Paladin.SpellLines = {
         Options={Gem=3},
     },
     {
+        Group='stunaoenuke',
+        Spells={'The Silent Command'},
+        Options={Gem=3, opt='USEAOE'}
+    },
+    {
         Group='twincast',
         Spells={'Glorious Exoneration'},
-        Options={Gem=4},
+        Options={Gem=function(lvl) return lvl > 100 and 4 end},
+    },
+    {
+        Group='stunaoe',
+        Spells={'Stun Command'},
+        Options={Gem=4, function(lvl) return lvl <= 100 and 4 end}
     },
     {
         Group='healtot',
@@ -145,11 +155,11 @@ Paladin.SpellLines = {
         Spells={'Armor of Implacable Faith'},
         Options={selfbuff=true},
     },
-    {
-        Group='heal',
-        Spells={'Greater Healing', 'Healing', 'Light Healing', 'Minor Healing', 'Salve'},
-        Options={Gem=function(lvl) return lvl <= 60 and 2 or nil end, heal=true, tank=true, regular=true}
-    },
+    -- {
+    --     Group='heal',
+    --     Spells={'Greater Healing', 'Healing', 'Light Healing', 'Minor Healing', 'Salve'},
+    --     Options={Gem=function(lvl) return lvl <= 60 and 2 or nil end, heal=true, tank=true, regular=true}
+    -- },
     {
         Group='curepoison',
         Spells={'Counteract Poison', 'Cure Poison'},
@@ -167,7 +177,7 @@ Paladin.SpellLines = {
     },
     {
         Group='undeadnuke',
-        Spells={'Expulse Undead', 'Ward Undead'},
+        Spells={'Last Rites', 'Expulse Undead', 'Ward Undead'},
         Options={Gem=function(lvl) return lvl <= 60 and 3 or nil end, opt='USENUKES', condition=function() return mq.TLO.Target.Body() == 'Undead' end}
     },
     {
@@ -182,7 +192,7 @@ Paladin.SpellLines = {
     }
 }
 Paladin.compositeNames = {['Ecliptic Force']=true, ['Composite Force']=true, ['Dissident Force']=true, ['Dichotomic Force']=true}
-Paladin.allDPSSpellGroups = {'stun1', 'stun2', 'stun3'}
+Paladin.allDPSSpellGroups = {'stun1', 'stun2', 'stun3', 'stunaoenuke', 'stunaoe'}
 
 --[[ AA's to sort out
 self:addAA('Bestow Divine Aura', {}) -- 
@@ -207,6 +217,8 @@ function Paladin:initSpellRotations()
     table.insert(self.spellRotations.standard, self.spells.stun2)
     table.insert(self.spellRotations.standard, self.spells.stun3)
     table.insert(self.spellRotations.standard, self.spells.undeadnuke)
+    table.insert(self.spellRotations.standard, self.spells.stunaoenuke)
+    table.insert(self.spellRotations.standard, self.spells.stunaoe)
 end
 
 Paladin.Abilities = {
@@ -230,11 +242,6 @@ Paladin.Abilities = {
         Type='Disc',
         Group='defy',
         Names={'Defy'},
-        Options={tanking=true}
-    },
-    { -- DD + agro + interrupt, mash
-        Type='AA',
-        Name='Disruptive Persecution',
         Options={tanking=true}
     },
     { -- agro + interrupt, mash
@@ -273,6 +280,11 @@ Paladin.Abilities = {
         Type='Skill',
         Name='Bash',
         Options={dps=true, condition=conditions.useBash}
+    },
+    { -- DD + agro + interrupt, mash
+        Type='AA',
+        Name='Disruptive Persecution',
+        Options={dps=true}
     },
 
     -- Burn

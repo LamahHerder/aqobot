@@ -80,6 +80,8 @@ end
 local clearTargetTimer = timer:new(5000)
 local function checkTarget()
     local targetType = mq.TLO.Target.Type()
+    local masterType = mq.TLO.Target.Master.Type()
+    local isPC = targetType == 'PC' or (targetType == 'Pet' and masterType == 'PC')
     if not targetType or targetType == 'Corpse' then
         state.assistMobID = 0
         state.tankMobID = 0
@@ -102,7 +104,8 @@ local function checkTarget()
         elseif clearTargetTimer.start_time ~= 0 then
             clearTargetTimer:reset(0)
         end
-    elseif targetType == 'Pet' or targetType == 'PC' then
+    -- elseif targetType == 'Pet' or targetType == 'PC' then
+    elseif isPC then
         state.assistMobID = 0
         state.tankMobID = 0
         if mq.TLO.Me.Combat() then mq.cmd('/attack off') end
@@ -139,15 +142,23 @@ local function buffSafetyCheck()
     if state.class == 'MNK' and mq.TLO.Me.PctHPs() < config.get('HEALPCT') and mq.TLO.Me.AbilityReady('Mend')() then
         mq.cmd('/doability mend')
     end
+    -- emu doesnt split out invis info?
+    -- if not state.paused and state.class ~= 'ROG' and mq.TLO.Me.Invis() and not mq.TLO.Me.Invis(1)() and not mq.TLO.Me.Invis(2)() then
+    --     mq.cmd('/makemevis')
+    -- end
+    if not state.paused and state.mobCountNoPets > 0 and state.fadeTimer:expired() then mq.cmd('/makemevis') end
     if mq.TLO.Me.Buff('Resurrection Sickness')() and mq.TLO.Me.Aura(1)() then
         mq.cmdf('/removeaura %s', mq.TLO.Me.Aura(1)())
     end
 end
 
-local lootMyCorpseTimer = timer:new(5000)
+local lootMyCorpseTimer = timer:new(2000)
+local reloadTimer = timer:new(60000)
 local function doLooting()
     local myCorpse = mq.TLO.Spawn('pccorpse '..mq.TLO.Me.CleanName()..'\'s corpse radius 100')
-    if not mq.TLO.Me.Combat() and mq.TLO.Me.CombatState() ~= 'COMBAT' and myCorpse() and lootMyCorpseTimer:expired() then
+    if mq.TLO.SpawnCount('pccorpse '..mq.TLO.Me.CleanName()..'\'s corpse radius 100')() > 1 and reloadTimer:expired() then mq.cmd('/reload') mq.delay(5000) reloadTimer:reset() end
+    -- if not mq.TLO.Me.Combat() and mq.TLO.Me.CombatState() ~= 'COMBAT' and myCorpse() and lootMyCorpseTimer:expired() then
+    if myCorpse() and not mq.TLO.Me.Combat() and lootMyCorpseTimer:expired() then
         lootMyCorpseTimer:reset()
         myCorpse.DoTarget()
         if mq.TLO.Target.Type() == 'Corpse' then
@@ -166,7 +177,7 @@ local function doLooting()
             end
         end
     end
-    if config.get('LOOTMOBS') and (mq.TLO.Me.CombatState() ~= 'COMBAT' or config.get('LOOTCOMBAT')) and not state.pullStatus then
+    if config.get('LOOTMOBS') and (state.mobCount == 0 or config.get('LOOTCOMBAT')) and not state.pullStatus then
         state.actionTaken = loot.lootMobs(1)
         if state.lootBeforePull then state.lootBeforePull = false end
     end
@@ -219,7 +230,7 @@ local function main()
                     if not state.actionTaken then
                         class:mainLoop()
                     end
-                    delay = 50
+                    delay = 16
                 else
                     -- stay in camp or stay chasing chase target if not paused but invis
                     local pet_target_id = mq.TLO.Pet.Target.ID() or 0
@@ -229,7 +240,21 @@ local function main()
                     aqo.camp.checkCamp()
                     common.checkChase()
                     common.rest()
-                    delay = 50
+                    delay = 16
+                end
+            end
+            -- printf('%s %s %s %s', state.useManastone, state.manastoneCount, state.actionTaken, mq.TLO.Me.Casting())
+            if state.useManastone and state.manastoneCount < 10 and not state.actionTaken and not mq.TLO.Me.Casting() then
+                -- printf('should use manastone')
+                local manastoneTimer = timer:new(500)
+                while mq.TLO.Me.PctHPs() > 50 and mq.TLO.Me.PctMana() < 90 do
+                    mq.cmd('/useitem Manastone')
+                    if manastoneTimer:expired() then break end
+                end
+                state.manastoneCount = state.manastoneCount + 1
+                if state.manastoneCount == 10 then
+                    state.useManastone = false
+                    state.manastoneCount = 0
                 end
             end
         else

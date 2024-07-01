@@ -9,7 +9,7 @@ local Wizard = class:new()
     https://forums.eqfreelance.net/index.php?topic=16645.0
 ]]
 function Wizard:init()
-    self.classOrder = {'assist', 'cast', 'mash', 'burn', 'recover', 'buff', 'rest', 'rez'}
+    self.classOrder = {'aggro', 'assist', 'burn', 'cast', 'mash', 'recover', 'buff', 'rest', 'rez'}
     self.spellRotations = {standard={}, ae={},custom={}}
     self:initBase('WIZ')
 
@@ -114,7 +114,7 @@ Wizard.Abilities = {
     {
         Type='Item',
         Name='Staff of Phenomenal Power',
-        Options={first=true}
+        Options={first=true, epicburn=true}
     },
 
     -- Buffs

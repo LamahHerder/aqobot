@@ -198,8 +198,10 @@ local function getHeal(healAbilities, healType, whoToHeal, options, inGroup)
                             return heal
                         end
                     elseif heal.CastType == abilities.Types.Item then
-                        local theItem = mq.TLO.FindItem(heal.ID)
-                        if heal:isReady(theItem) == abilities.IsReady.SHOULD_CAST then return heal end
+                        if heal.TargetType ~= 'Self' or whoToHeal == mq.TLO.Me.ID() then
+                            local theItem = mq.TLO.FindItem(heal.ID)
+                            if heal:isReady(theItem) == abilities.IsReady.SHOULD_CAST then return heal end
+                        end
                     else
                         if heal:isReady() == abilities.IsReady.SHOULD_CAST then return heal end
                     end
@@ -213,6 +215,17 @@ end
 
 function healing.heal(healAbilities, options)
     local whoToHeal, typeOfHeal, inGroup = getHurt(options)
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.TANK, true
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class "shadow knight"').ID(), HEAL_TYPES.TANK, true
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.PANIC, true
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.REGULAR, true
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.HOT, true
+    -- local whoToHeal, typeOfHeal, inGroup = nil, HEAL_TYPES.GROUP, true
+    -- local whoToHeal, typeOfHeal, inGroup = nil, HEAL_TYPES.GROUPPANIC, true
+    -- local whoToHeal, typeOfHeal, inGroup = nil, HEAL_TYPES.GROUPHOT, true
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.TANK, false
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.REGULAR, false
+    -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.PANIC, false
     local healToUse = getHeal(healAbilities, typeOfHeal, whoToHeal, options, inGroup)
     if not healToUse and typeOfHeal == HEAL_TYPES.PANIC then
         healToUse = getHeal(healAbilities, HEAL_TYPES.REGULAR, whoToHeal, options)
@@ -225,7 +238,7 @@ function healing.heal(healAbilities, options)
             -- mq.cmdf('/mqt id %s', whoToHeal)
             mq.TLO.Spawn('id '..whoToHeal).DoTarget()
         end
-        if abilities.use(healToUse) then return true end
+        if abilities.use(healToUse) then state.setHealState(whoToHeal, typeOfHeal, healToUse) return true end
         -- if typeOfHeal == HEAL_TYPES.HOT then
             -- local targetName = mq.TLO.Target.CleanName()
             -- if not targetName then return end
@@ -279,6 +292,8 @@ function healing.healSelf(healAbilities, options)
                 state.queuedAction = function()
                     if originalTargetID ~= mq.TLO.Target.ID() then mq.cmdf('/squelch /mqt id %s', originalTargetID) end
                 end
+                state.queuedActionTimer:reset()
+                state.queuedActionTimer.expiration = 5000
                 return true
             end
         end
@@ -308,9 +323,10 @@ function healing.massRez()
                         mq.cmd('/corpse')
                         mq.delay(50)
                         mq.delay(6000, function() return mq.TLO.Me.AltAbilityReady('Blessing of Resurrection')() end)
+                        mq.delay(1000)
                         mq.cmdf('/alt act %s', mq.TLO.Me.AltAbility('Blessing of Resurrection').ID())
                         -- mq.cmdf('/gu rezzing %s', corpseName)
-                        mq.delay(6500)
+                        mq.delay(3000)
                     end
                     state.cannotRez = false
                 end

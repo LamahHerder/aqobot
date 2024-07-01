@@ -14,7 +14,7 @@ local Enchanter = class:new()
     https://forums.eqfreelance.net/index.php?topic=16075.0
 ]]
 function Enchanter:init()
-    self.classOrder = {'assist', 'mez', 'assist', 'aggro', 'debuff', 'cast', 'mash', 'burn', 'recover', 'buff', 'rest', 'managepet', 'rez'}
+    self.classOrder = {'assist', 'mez', 'assist', 'aggro', 'debuff', 'burn', 'cast', 'mash', 'recover', 'buff', 'rest', 'managepet', 'rez'}
     self.spellRotations = {standard={},custom={}}
     self.AURAS = {twincast=true, combatinnate=true, spellfocus=true, regen=true, disempower=true,}
     self:initBase('ENC')
@@ -50,6 +50,7 @@ function Enchanter:initClassOptions()
     self:addOption('USESPELLGUARD', 'Use Spell Guard', true, nil, 'Toggle use of Spell Guard', 'checkbox', nil, 'UseSpellGuard', 'bool')
     self:addOption('USEDEBUFF', 'Use Tash', false, nil, 'Toggle use of single target tash ability', 'checkbox', nil, 'UseDebuff', 'bool')
     self:addOption('USEDEBUFFAOE', 'Use Tash AOE', true, nil, 'Toggle use of AOE tash ability', 'checkbox', nil, 'UseDebuffAOE', 'bool')
+    self:addOption('USECRIPPLE', 'Use Cripple', true, nil, 'Toggle use of single target cripple ability', 'checkbox', nil, 'UseCripple', 'bool')
     self:addOption('USEDISPEL', 'Use Dispel', true, nil, 'Dispel mobs with Eradicate Magic AA', 'checkbox', nil, 'UseDispel', 'bool')
     self:addOption('DEBUFFONPULL', 'Debuff on Pull', true, nil, 'Debuff mobs immediately', 'checkbox', nil, 'DebuffOnPull', 'bool')
 end
@@ -69,6 +70,7 @@ end
     constance's animation
 ]]
 -- mindreap, polyluminous assault, chromashear, psychological appropriation, chromatic flare
+-- Overwhelming Splendor
 Enchanter.SpellLines = {
     {-- Slot 1
         Group='tash',
@@ -98,7 +100,7 @@ Enchanter.SpellLines = {
     },
     {-- targeted AE mez. Slot 4
         Group='mezaeprocblur',
-        Spells={'Entrancing Stare', 'Mesmeric Stare', 'Deceiving Stare', 'Transfixing Stare', 'Anodyne Stare', 'Mesmerizing Stare', 'Sedative Stare', 'Soporific Stare', --[[emu cutoff]] 'Entrancing Lights'},
+        Spells={'Entrancing Stare', 'Mesmeric Stare', 'Deceiving Stare', 'Transfixing Stare', 'Anodyne Stare', 'Mesmerizing Stare', 'Sedative Stare', 'Soporific Stare', --[[emu cutoff]] 'Wake of Felicity', 'Entrancing Lights'},
         Options={Gem=4}
     },
     {-- main dot. Slot 5
@@ -110,7 +112,7 @@ Enchanter.SpellLines = {
         Group='mindnuke',
         NumToPick=2,
         Spells={'Mindrend', 'Mindreap', 'Mindrift', 'Mindslash', 'Mindsunder', 'Mindcleave', 'Mindscythe', 'Mindblade', --[[emu cutoff]] 'Ancient: Neurosis', 'Madness of Ikkibi', 'Insanity'},
-        Options={opt='USENUKES', Gems={6,7}}
+        Options={opt='USENUKES', Gems={6,function(lvl) return lvl >= 100 and 7 or nil end}}
     },
     {-- 28k nuke. Slot 8
         Group='nuke2',
@@ -173,14 +175,14 @@ Enchanter.SpellLines = {
     -- Polyradiant Rune -- hate mod rune, stun proc on fade
 
     {Group='groupdotrune', Spells={'Legion of Dhakka', 'Legion of Xetheg', 'Legion of Cekenar'}},
-    {Group='groupspellrune', Spells={'Legion of Ogna', 'Legion of Liako', 'Legion of Kildrukaun'}},
-    {Group='groupaggrorune', Spells={'Gloaming Rune', 'Eclipsed Rune'}}, -- group rune + big nuke/aggro reduction proc
+    {Group='groupspellrune', Spells={'Legion of Ogna', 'Legion of Liako', 'Legion of Kildrukaun', --[[emu cutoff]] 'Circle of Alendar'}, Options={alias='SPELLRUNE'}},
+    {Group='groupaggrorune', Spells={'Gloaming Rune', 'Eclipsed Rune', --[[emu cutoff]] 'Rune of Rikkukin'}, Options={alias='MELEERUNE'}}, -- group rune + big nuke/aggro reduction proc
 
     {Group='debuffdot', Spells={'Dismaying Constriction', 'Perplexing Constriction', 'Confounding Constriction', 'Confusing Constriction', 'Baffling Constriction'}}, -- debuff + nuke + dot
     {Group='manadot', Spells={'Tears of Kasha', 'Tears of Xenacious'}}, -- hp + mana DoT
     {Group='nukerune', Spells={'Chromatic Spike', 'Chromatic Flare'}}, -- 18k nuke + self rune
 
-    {Group='nuke1', Spells={'Polyradiant Assault', 'Polyluminous Assault', 'Colored Chaos'}}, -- 35k nuke
+    {Group='nuke1', Spells={'Polyradiant Assault', 'Polyluminous Assault', 'Colored Chaos'}, Options={Gem=function(lvl) return lvl == 70 and 7 or nil end}}, -- 35k nuke
     {Group='aenuke', Spells={'Gravity Roil'}}, -- 23k targeted ae nuke
 
     {Group='calm', Spells={'Still Mind'}},
@@ -189,7 +191,7 @@ Enchanter.SpellLines = {
     {Group='stunpbae', Spells={'Color Calibration', 'Color Conflagration', 'Color Shift', 'Color Flux'}, {Gem=function(lvl) return not Enchanter:get('MEZAE') and lvl <= 60 and 4 or nil end}},
     {Group='stunaerune', Spells={'Polyluminous Rune', 'Polycascading Rune', 'Polyfluorescent Rune', 'Ethereal Rune', 'Arcane Rune'}, Options={selfbuff=true}}, -- self rune, proc ae stun on fade
 
-    {Group='pet', Spells={'Flariton\'s Animation', 'Constance\'s Animation', 'Omica\'s Animation', 'Nureya\'s Animation', 'Gordianus\' Animation', 'Xorlex\'s Animation', 'Seronvall\'s Animation', 'Novak\'s Animation', --[[emu cutoff]]  'Aeidorb\'s Animation', 'Boltran\'s Animation', 'Uleen\'s Animation', 'Sagar\'s Animation', 'Sisna\'s Animation', 'Shalee\'s Animation', 'Kilan\'s Animation', 'Myrcil\'s Animation', 'Juli\'s Animation', 'Pendril\'s Animation'}, Options={}},
+    {Group='pet', Spells={'Flariton\'s Animation', 'Constance\'s Animation', 'Omica\'s Animation', 'Nureya\'s Animation', 'Gordianus\' Animation', 'Xorlex\'s Animation', 'Seronvall\'s Animation', 'Novak\'s Animation', --[[emu cutoff]] 'Salik\'s Animation', 'Aeidorb\'s Animation', 'Boltran\'s Animation', 'Uleen\'s Animation', 'Sagar\'s Animation', 'Sisna\'s Animation', 'Shalee\'s Animation', 'Kilan\'s Animation', 'Myrcil\'s Animation', 'Juli\'s Animation', 'Pendril\'s Animation'}, Options={}},
     {Group='pethaste', Spells={'Invigorated Minion'}, Options={petbuff=true}},
     -- buffs
     -- {Group='unified', Spells={'Unified Alacrity'}, Options={emu=true, alias='KEI', selfbuff=true}},
@@ -209,9 +211,10 @@ Enchanter.SpellLines = {
     {Group='shield', Spells={'Shield of Memories', 'Shield of Shadow', 'Shield of Restless Ice', 'Greater Shielding', 'Major Shielding', 'Shielding', 'Lesser Shielding', 'Minor Shielding'}},
     {Group='ward', Spells={'Ward of the Beguiler', 'Ward of the Transfixer'}},
 
-    {Group='spasm', Spells={'Synapsis Spasm', 'Insipid Weakness', 'Listless Power', 'Feckless Might', 'Disempower', 'Ebbing Strength', 'Enfeeblement', 'Weaken'}, Options={debuff=true, opt='USEDEBUFF', emu=true, Gem=function(lvl) return lvl <= 60 and 6 or nil end}},
+    {Group='spasm', Spells={'Synaptic Seizure', 'Synapsis Spasm', 'Insipid Weakness', 'Listless Power', 'Feckless Might', 'Disempower', 'Ebbing Strength', 'Enfeeblement', 'Weaken'}, Options={debuff=true, opt='USECRIPPLE', emu=true, Gem=function(lvl) return (lvl <= 60 and 6) or (lvl == 70 and 2) or nil end, condition=function() return mq.TLO.Target.Named() end}},
     {Group='dispel', Spells={'Abashi\'s Disempowerment', 'Recant Magic', 'Nullify Magic', 'Strip Enchantment', 'Cancel Magic', 'Taper Enchantment'}, Options={opt='USEDISPEL'}},
-    {Group='slow', Spells={'Tepid Deeds', 'Languid Pace'}, Options={opt='USESLOW', debuff=true, slow=true, Gem=function(lvl) return lvl <= 60 and 2 or nil end}}
+    {Group='slow', Spells={'Tepid Deeds', 'Languid Pace'}, Options={opt='USESLOW', debuff=true, slow=true, Gem=function(lvl) return lvl <= 60 and 2 or nil end}},
+    {Group='charisma', Spells={'Overwhelming Splendor'}, Options={alias='CHA'}}
 }
 
 Enchanter.compositeNames = {['Ecliptic Reinforcement']=true,['Composite Reinforcement']=true,['Dissident Reinforcement']=true,['Dichotomic Reinforcement']=true}
@@ -431,9 +434,9 @@ function Enchanter:initSpellRotations()
     --table.insert(self.spellRotations.standard, self.spells.mezae)
     table.insert(self.spellRotations.standard, self.spells.dot1)
     table.insert(self.spellRotations.standard, self.spells.dot2)
+    table.insert(self.spellRotations.standard, self.spells.nuke1)
     table.insert(self.spellRotations.standard, self.spells.mindnuke1)
     table.insert(self.spellRotations.standard, self.spells.mindnuke2)
-    table.insert(self.spellRotations.standard, self.spells.nuke1)
     table.insert(self.spellRotations.standard, self.spells.nuke2)
     table.insert(self.spellRotations.standard, self.spells.nuke3)
     table.insert(self.spellRotations.standard, self.spells.composite)
@@ -458,17 +461,17 @@ end
 -- synergy
 -- nuke5
 -- dot2
-function Enchanter:findNextSpell()
-    if self:isEnabled('USEDEBUFF') and self.spells.tash and not mq.TLO.Target.Tashed() and self.spells.tash:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.tash end
-    if self.spells.composite and self.spells.composite:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.composite end
-    if castSynergy() then return nil end
-    --if state.emu and self.spells.spasm and self.spells.spasm:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.spasm end
-    if self.spells.nuke5 and self.spells.nuke5:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.nuke5 end
-    if self.spells.dot1 and self.spells.dot1:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.dot1 end
-    if self.spells.dot2 and self.spells.dot2:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.dot2 end
-    if self.spells.nuke4 and self.spells.nuke4:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.nuke4 end
-    return nil -- we found no missing dot that was ready to cast, so return nothing
-end
+-- function Enchanter:findNextSpell()
+--     if self:isEnabled('USEDEBUFF') and self.spells.tash and not mq.TLO.Target.Tashed() and self.spells.tash:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.tash end
+--     if self.spells.composite and self.spells.composite:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.composite end
+--     if castSynergy() then return nil end
+--     --if state.emu and self.spells.spasm and self.spells.spasm:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.spasm end
+--     if self.spells.nuke5 and self.spells.nuke5:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.nuke5 end
+--     if self.spells.dot1 and self.spells.dot1:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.dot1 end
+--     if self.spells.dot2 and self.spells.dot2:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.dot2 end
+--     if self.spells.nuke4 and self.spells.nuke4:isReady() == abilities.IsReady.SHOULD_CAST then return self.spells.nuke4 end
+--     return nil -- we found no missing dot that was ready to cast, so return nothing
+-- end
 
 function Enchanter:recover()
     -- modrods
@@ -487,7 +490,8 @@ function Enchanter:recover()
             abilities.use(abilities.Item:new({Name=manacrystal(), ID=manacrystal.ID()}), self)
         end
     end
-    if mq.TLO.Zone.ShortName() ~= 'poknowledge' and mq.TLO.Me.PctMana() < config.get('MANASTONESTART') and mq.TLO.Me.PctHPs() > config.get('MANASTONESTARTHP') then
+    local zonesn = mq.TLO.Zone.ShortName()
+    if zonesn ~= 'poknowledge' and zonesn ~= 'thevoida' and mq.TLO.Me.PctMana() < config.get('MANASTONESTART') and mq.TLO.Me.PctHPs() > config.get('MANASTONESTARTHP') then
         local manastone = mq.TLO.FindItem('Manastone')
         if not manastone() then return end
         local manastoneTimer = timer:new((config.get('MANASTONETIME') or 0)*1000)

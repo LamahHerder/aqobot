@@ -1,6 +1,8 @@
 local mq = require('mq')
+local config = require('interface.configuration')
 local logger = require('utils.logger')
 local timer = require('libaqo.timer')
+local constants = require('constants')
 
 local state = {
     class = mq.TLO.Me.Class.ShortName() or '',
@@ -34,6 +36,7 @@ local state = {
     rotationRefreshTimer = timer:new(60000, true),
     nuketimer = timer:new(0),
     sitTimer = timer:new(10000),
+    fadeTimer = timer:new(10000),
     -- ActAsLevel = 65
     -- testCures = true,
 }
@@ -42,6 +45,7 @@ function state.resetCombatState(debug, caller)
     logger.debug(debug, 'Resetting combatState. pullState before=%s. caller=%s', state.pullState, caller)
     state.burnActive = false
     state.burnActiveTimer:reset(0)
+    state.burnNow = false
     state.assistMobID = 0
     state.tankMobID = 0
     state.pullMobID = 0
@@ -79,9 +83,10 @@ function state.resetPositioningState()
 end
 
 state.queuedAction = nil
+state.queuedActionTimer = timer:new(20000)
 
 function state.handleQueuedAction()
-    if state.queuedAction then
+    if state.queuedAction and not state.queuedActionTimer:expired() then
         local result = state.queuedAction()
         if type(result) ~= 'function' then
             state.queuedAction = nil
@@ -156,6 +161,8 @@ function state.handleCastingState()
                         casting:use()
                         return tmpQueuedAction
                     end
+                    state.queuedActionTimer:reset()
+                    state.queuedActionTimer.expiration = 5000
                 else
                     state.castAttempts = 0
                 end
@@ -163,10 +170,12 @@ function state.handleCastingState()
                 state.castAttempts = 0
             end
             state.resetCastingState()
+            state.resetHealState()
             return true
         elseif (state.casting.TargetType == 'Single' or state.casting.TargetType == 'Line of Sight') and not mq.TLO.Target() then
             mq.cmd('/stopcast')
             state.resetCastingState()
+            state.resetHealState()
             return true
         else
             if state.class == 'BRD' then
@@ -175,6 +184,19 @@ function state.handleCastingState()
                 else
                     return true
                 end
+            elseif constants.healClasses[state.class] then
+                -- evaluate interrupting cast for a emergency heal
+                -- local injured = mq.TLO.Group.Injured(config.get('PANICHEALPCT'))() or 0
+                -- injured = 1
+                -- if injured > 0 and mq.TLO.Me.CastTimeLeft() > 1000 then
+                --     print('time to interrupt')
+                    -- if emergency heal available then
+                        -- mq.cmd('/stopcast')
+                        -- state.resetCastingState()
+                        -- state.resetHealState()
+                        -- return true
+                    -- end
+                -- end
             end
             return false
         end
@@ -197,6 +219,20 @@ function state.resetCastingState()
     state.fizzled = nil
     state.interrupted = nil
     state.actionTaken = false
+end
+
+function state.setHealState(whoToHeal, healType, healToUse)
+    if (healToUse.MyCastTime or 0) > 0 then
+        state.healTarget = whoToHeal
+        state.healType = healType
+        state.healToUse = healToUse
+    end
+end
+
+function state.resetHealState()
+    state.healTarget = nil
+    state.healType = nil
+    state.healToUse = nil
 end
 
 state.corpseToLoot = nil

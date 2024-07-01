@@ -48,7 +48,7 @@ local Cleric = class:new()
 ]]
 function Cleric:init()
     self.spellRotations = {standard={},custom={}}
-    self.classOrder = {'heal', 'cure', 'rez', 'assist', 'debuff', 'mash', 'cast', 'burn', 'recover', 'buff', 'rest'}
+    self.classOrder = {'heal', 'cure', 'rez', 'aggro', 'assist', 'debuff', 'burn', 'mash', 'cast', 'recover', 'buff', 'rest'}
     self:initBase('CLR')
 
     self:initClassOptions()
@@ -74,6 +74,7 @@ function Cleric:initClassOptions()
     self:addOption('USESYMBOL', 'Use Symbol', false, nil, 'Toggle use of Symbol buff line', 'checkbox', nil, 'UseSymbol', 'bool')
     self:addOption('USERETORT', 'Use Retort', true, nil, 'Toggle use of Retort spell line', 'checkbox', nil, 'UseRetort', 'bool')
     self:addOption('USECURES', 'Use Cures', true, nil, 'Toggle use of cure spells', 'checkbox', nil, 'UseCures', 'bool')
+    self:addOption('USEFADE', 'Use Fade', true, nil, 'Toggle use of Divine Peace', 'checkbox', nil, 'UseFade', 'bool')
 end
 --[[
 -- dps burns
@@ -268,7 +269,7 @@ Cleric.SpellLines = {
         Spells={'Symbol of Ealdun', --[[emu cutoff]] 'Symbol of Balikor', 'Symbol of Kazad', 'Symbol of Marzin', 'Symbol of Naltron', 'Symbol of Pinzarn', 'Symbol of Ryltan', 'Symbol of Transal'},
         Options={opt='USESYMBOL', classes={CLR=true,DRU=true,SHM=true,MAG=true,ENC=true,WIZ=true,NEC=true}, condition=function() return mq.TLO.SpawnCount('pc group class druid')() > 0 end, alias='SINGLESYMBOL'}
     },
-    {Group='armor', Spells={'Armor of the Avowed', 'Armor of Penance', 'Armor of Sincerity', 'Armor of the Merciful', 'Armor of the Ardent', 'Armor of the Pious', 'Armor of the Zealot'}, Options={}},
+    {Group='armor', Spells={'Armor of the Avowed', 'Armor of Penance', 'Armor of Sincerity', 'Armor of the Merciful', 'Armor of the Ardent', 'Armor of the Pious', 'Armor of the Zealot'}, Options={selfbuff=true}},
     -- Group buff, cast on self when down, damage absorb then heal proc on fade. absorbs 4x non-greater version. Swap gem
     {Group='bigvie', Spells={'Rallied Greater Aegis of Vie', 'Rallied Greater Blessing of Vie', 'Rallied Greater Protection of Vie', 'Rallied Greater Guard of Vie', 'Rallied Greater Ward of Vie', --[[emu cutoff]] 'Panoply of Vie'}, Options={opt='USEVIE', alias='VIE', selfbuff=true, Gem=function(lvl) return lvl <= 70 and 4 or nil end}},
     -- Just use greater line instead
@@ -292,7 +293,7 @@ Cleric.SpellLines = {
         Options={opt='USEDEBUFF', debuff=true, Gem=function(lvl) return lvl <= 70 and 9 or nil end, condition=function() return mq.TLO.Target.Named() end}
     },
     {Group='yaulp', Spells={'Yaulp VI'}, Options={combat=true, ooc=false, opt='USEYAULP', selfbuff=true}},
-    {Group='hammerpet', Spells={'Unswerving Hammer of Justice'}, Options={Gem=function(lvl) return lvl <= 70 and not Cleric:isEnabled('USESTUN') and 11 or nil end, opt='USEHAMMER'}},
+    {Group='hammerpet', Spells={'Unswerving Hammer of Justice'}, Options={Gem=function(lvl) return lvl <= 70 and not Cleric:isEnabled('USESTUN') and 11 or nil end, opt='USEHAMMER', precast=function() mq.cmdf('/mqt id %s', state.assistMobID) mq.delay(1) end}},
     {Group='rgc', Spells={'Remove Greater Curse'}, Options={cure=true,Curse=true, Gem=function(lvl) return lvl <= 70 and 12 or nil end}},
     {Group='stun', Spells={'Vigilant Condemnation', 'Sound of Divinity', 'Shock of Wonder', 'Holy Might', 'Stun'}, Options={opt='USESTUN', Gem=11}},
     {Group='aestun', Spells={'Silent Dictation'}},
@@ -313,6 +314,12 @@ Cleric.Abilities = {
         Type='AA',
         Name='Blessing of Resurrection',
         Options={rez=true}
+    },
+
+    {
+        Type='AA',
+        Name='Divine Peace',
+        Options={fade=true, opt='USEFADE', postcast=function() mq.delay(1000) mq.cmd('/makemevis') end}
     },
 
     -- Heal

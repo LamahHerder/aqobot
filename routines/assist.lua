@@ -24,7 +24,9 @@ local function eventEnraged(line, name)
         if mq.TLO.Me.Combat() then
             -- target is enraged
             mq.cmd('/squelch /face fast')
-            if math.abs(mq.TLO.Me.Heading.Degrees()-mq.TLO.Target.Heading.Degrees()) > 85 and not mq.TLO.Stick.Behind() then
+            local myHeading = mq.TLO.Me.Heading.Degrees()
+            local mobHeading = mq.TLO.Target.Heading.Degrees()
+            if myHeading and mobHeading and math.abs(myHeading-mobHeading) > 85 and not mq.TLO.Stick.Behind() then
                 --state.dontAttack = true
                 mq.cmd('/attack off')
             end
@@ -113,7 +115,10 @@ function assist.shouldAssist(assist_target)
     if not assist_target then assist_target = assist.getAssistSpawn() end
     if not assist_target then return false end
     if assist_target == -1 then
-        if mq.TLO.Target.Type() == 'NPC' then
+        local targetType = mq.TLO.Target.Type()
+        local masterType = mq.TLO.Target.Master.Type()
+        local isNPC = targetType == 'NPC' or (targetType == 'Pet' and masterType == 'NPC')
+        if isNPC then
             assist_target = mq.TLO.Target
         else
             return false
@@ -122,10 +127,12 @@ function assist.shouldAssist(assist_target)
     local id = assist_target.ID()
     local hp = assist_target.PctHPs()
     local mob_type = assist_target.Type()
+    local master_type = assist_target.Master.Type()
+    local is_npc = mob_type == 'NPC' or (mob_type == 'Pet' and master_type == 'NPC')
     local mob_x = assist_target.X()
     local mob_y = assist_target.Y()
     if not id or id == 0 or not hp or not mob_x or not mob_y then return false end
-    if mob_type == 'NPC' and hp < config.get('AUTOASSISTAT') then
+    if is_npc and hp < config.get('AUTOASSISTAT') then
         if camp.Active and helpers.distance(camp.X, camp.Y, mob_x, mob_y) <= config.get('CAMPRADIUS')^2 then
             return true
         elseif not camp.Active and helpers.distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), mob_x, mob_y) <= config.get('CAMPRADIUS')^2 then
@@ -157,7 +164,7 @@ function assist.getAssistSpawnIncludeManual()
     if assistTarget == -1 then
         -- Don't manual /assist if already on an assist target and switch with MA is false
         if state.assistMobID > 0 and mq.TLO.Target.ID() == state.assistMobID and not config.get('SWITCHWITHMA') then return state.assistMobID end
-        if mq.TLO.Me.XTarget() > 0 then
+        if mq.TLO.Spawn('npc radius '..config.get('CAMPRADIUS')).Aggressive() then
             if manualAssistTimer:expired() or not mq.TLO.Target() then
                 local assistNames = helpers.split(config.get('ASSISTNAMES'), ',')
                 for _,assistName in ipairs(assistNames) do
@@ -169,7 +176,7 @@ function assist.getAssistSpawnIncludeManual()
                     end
                 end
             end
-            if mq.TLO.Target.Type() == 'NPC' then
+            if mq.TLO.Target.Type() == 'NPC' or (mq.TLO.Target.Type() == 'Pet' and mq.TLO.Target.Master.Type() == 'NPC') then
                 assistMobID = mq.TLO.Target.ID()
             end
         end
@@ -182,7 +189,10 @@ end
 ---@param assistMobID number @The Spawn ID of the target to assist on
 function assist.checkMATargetSwitch(assistMobID)
     -- if we are targeting a mob, but the MA is targeting themself, then stop what we're doing
-    if mq.TLO.Target.Type() == 'NPC' and assistMobID == assist.getAssistID() then
+    local targetType = mq.TLO.Target.Type()
+    local masterType = mq.TLO.Target.Master.Type()
+    local isNPC = targetType == 'NPC' or (targetType == 'Pet' and masterType == 'NPC')
+    if isNPC and assistMobID == assist.getAssistID() then
         mq.cmd('/multiline ; /squelch /mqtarget clear; /pet back; /attack off; /autofire off;')
         state.assistMobID = 0
         return false
@@ -200,6 +210,7 @@ function assist.checkMATargetSwitch(assistMobID)
             return false
         end
     end
+    if mq.TLO.Stick.Active() then mq.cmd('/stick off') end
     return true
 end
 
@@ -245,7 +256,7 @@ end
 ---Navigate to the current target if the target is within the camp radius.
 function assist.getCombatPosition()
     if mode.currentMode:getName() == 'manual' then return end
-    if state.assistMobID == 0 or mq.TLO.Target.ID() ~= state.assistMobID or not assist.shouldAssist() then
+    if state.assistMobID == 0 or mq.TLO.Target.ID() ~= state.assistMobID or not assist.shouldAssist() or (mq.TLO.Target.PctHPs() or 200) >= config.get('AUTOASSISTAT') then
         if mq.TLO.Me.Combat() then mq.cmd('/attack off') end
         return false
     end
@@ -382,7 +393,8 @@ end
 function assist.sendPet()
     local targethp = mq.TLO.Target.PctHPs()
     if assist.isFighting() then
-        if class.summoncompanion and mq.TLO.Pet.ID() > 0 and helpers.distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), mq.TLO.Pet.X(), mq.TLO.Pet.Y()) > 625 then
+        if class.summoncompanion and mq.TLO.Pet.ID() > 0 and (mq.TLO.Pet.Distance3D() or 0) > config.get('CAMPRADIUS') then
+        -- if class.summoncompanion and mq.TLO.Pet.ID() > 0 and helpers.distance(mq.TLO.Me.X(), mq.TLO.Me.Y(), mq.TLO.Pet.X(), mq.TLO.Pet.Y()) > 625 then
             class.summoncompanion:use()
         end
         if sendPetTimer:expired() and targethp and targethp <= config.get('AUTOASSISTAT') then

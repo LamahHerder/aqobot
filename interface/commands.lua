@@ -288,21 +288,8 @@ function commands.commandHandler(...)
     elseif opt == 'MANASTONE' then
         local manastone = mq.TLO.FindItem('Manastone')
         if not manastone() then return end
-        local manastoneTimer = timer:new(5000)
-        while mq.TLO.Me.PctHPs() > 50 and mq.TLO.Me.PctMana() < 90 do
-            mq.cmd('/useitem Manastone')
-            if manastoneTimer:expired() then break end
-        end
-    elseif opt == 'PAUSEFORBUFFS' then
-        if mode.currentMode:getName() == 'huntertank' then
-            movement.stop()
-            state.holdForBuffs = timer:new(15000)
-            logger.info('Holding pulls for 15 seconds for buffing')
-        end
-    elseif opt == 'RESUMEFORBUFFS' then
-        if mode.currentMode:getName() == 'huntertank' then
-            state.holdForBuffs = nil
-        end
+        state.useManastone = true
+        state.manastoneCount = 0
     elseif opt == 'ARMPETS' then
         class:armPets()
     elseif opt == 'ASSISTME' then
@@ -317,6 +304,9 @@ function commands.commandHandler(...)
             mq.cmdf('/blockspell add pet %s', spellid)
             mq.delay(1)
         end
+        if constants.intClasses[mq.TLO.Me.Class.ShortName()] then
+            mq.cmdf('/blockspell add me %s', 5415) -- talisman of wunshi, use caster self shield buff
+        end
     elseif opt == 'REZ' then
         mq.delay(3000, function() return not mq.TLO.Me.Casting() end)
         if class.rezAbility and not mq.TLO.Me.Casting() then
@@ -325,6 +315,8 @@ function commands.commandHandler(...)
         end
     elseif opt == 'REZALL' then
         class.massRez()
+    elseif opt == 'REBUFF' then
+        state.rebuff = true
     else
         commands.classSettingsHandler(opt, new_value)
     end

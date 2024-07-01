@@ -32,6 +32,8 @@ local function summonItem(buff, base)
             and (not buff.ReagentID or mq.TLO.FindItemCount(buff.ReagentID)() >= buff.ReagentCount) then
         if abilities.use(buff, base) then
             state.queuedAction = function() mq.cmd('/autoinv') end
+            state.queuedActionTimer:reset()
+            state.queuedActionTimer.expiration = 20000
             return true
         end
     end
@@ -85,7 +87,7 @@ local function buffSelf(base)
         if state.subscription ~= 'GOLD' then buffName = buff.Name:gsub(' Rk%..*', '') end
         if buff.SummonID then
             if base:isAbilityEnabled(buff.opt) and (not buff.nodmz or not constants.DMZ[mq.TLO.Zone.ID()]) then
-                return summonItem(buff, base)
+                if summonItem(buff, base) then return true end
             end
         else
             local canCast = abilities.IsReady.CAN_CAST
@@ -118,6 +120,8 @@ local function buffSelf(base)
                                 end
                             end
                         end
+                        state.queuedActionTimer:reset()
+                        state.queuedActionTimer.expiration = 20000
                     end
                     return result
                 end
@@ -238,7 +242,7 @@ function buff.buff(base)
     if buffCombat(base) then return true end
     if buffActors(base, true) then return true end
 
-    if not common.clearToBuff() or not buffOOCTimer:expired() or mq.TLO.Me.Moving() then return end
+    if (not common.clearToBuff() or not buffOOCTimer:expired() or mq.TLO.Me.Moving()) and not state.rebuff then return end
     buffOOCTimer:reset()
     local originalTargetID = mq.TLO.Target.ID()
 
@@ -248,6 +252,7 @@ function buff.buff(base)
     end
 
     common.checkItemBuffs()
+    if state.rebuff then state.rebuff = false end
 end
 
 function buff.setupBegEvents(callback)

@@ -80,7 +80,7 @@ local Shaman = class:new()
     
 ]]
 function Shaman:init()
-    self.classOrder = {'heal', 'cure', 'assist', 'aggro', 'debuff', 'cast', 'burn', 'recover', 'rez', 'buff', 'rest', 'managepet'}
+    self.classOrder = {'heal', 'cure', 'assist', 'aggro', 'debuff', 'burn', 'cast', 'recover', 'rez', 'buff', 'rest', 'managepet'}
     self.spellRotations = {standard={},hybrid={},dps={},custom={}}
     self:initBase('SHM')
 
@@ -93,12 +93,13 @@ function Shaman:init()
     self:addCommonAbilities()
 
     state.nuketimer = timer:new(3000)
-    state.swapGem = 6
+    state.swapGem = 12
 end
 
 function Shaman:initClassOptions()
     self:addOption('USEDEBUFF', 'Use Malo', true, nil, 'Toggle casting malo on mobs', 'checkbox', nil, 'UseDebuff', 'bool')
     self:addOption('USEDISPEL', 'Use Dispel', true, nil, 'Toggle use of dispel', 'checkbox', nil, 'UseDispel', 'bool')
+    self:addOption('USECRIPPLE', 'Use Cripple', true, nil, 'Toggle use of single target cripple ability', 'checkbox', nil, 'UseCripple', 'bool')
     self:addOption('USESLOW', 'Use Slow', true, nil, 'Toggle casting slow on mobs', 'checkbox', nil, 'UseSlow', 'bool')
     self:addOption('USESLOWAOE', 'Use Slow AOE', true, nil, 'Toggle casting AOE slow on mobs', 'checkbox', nil, 'UseSlowAOE', 'bool')
     self:addOption('SLOWALL', 'Slow All Mobs', false, nil, 'Toggle casting slow on all mobs', 'checkbox', nil, 'SlowAll', 'bool')
@@ -139,7 +140,7 @@ Shaman.SpellLines = {
         Spells={'Gelid Gift', 'Polar Gift', 'Wintry Gift', 'Frostbitten Gift', 'Glacial Gift', 'Frostfall Boon'},
         Options={
             -- heal=true, tank=true,
-            -- opt='USENUKES',
+            opt='USENUKES',
             Gems={4,function() return Shaman:get('SPELLSET') ~= 'dps' and not Shaman:isEnabled('USEGROWTH') and 6 or nil end},
             -- precast = function() mq.cmdf('/mqtar id %s', mq.TLO.Group.MainTank.ID() or config.get('CHASETARGET')) end
         },
@@ -253,7 +254,7 @@ Shaman.SpellLines = {
     {Group='hot', Spells={'Celestial Health', 'Celestial Remedy'}, Options={}},
     {Group='idol', Spells={'Idol of Malos'}, Options={opt='USEDEBUFF', debuff=true, condition=function() return mq.TLO.Spawn('Spirit Idol')() ~= nil end}},
     {Group='dispel', Spells={'Abashi\'s Disempowerment', 'Cancel Magic'}, Options={opt='USEDISPEL', debuff=true, Gem=function(lvl) return lvl <= 70 and 5 or nil end}},
-    {Group='debuff', Spells={'Crippling Spasm', 'Listless Power', 'Disempower'}, Options={opt='USEDEBUFF', debuff=true}},
+    {Group='debuff', Spells={'Crippling Spasm', 'Listless Power', 'Disempower'}, Options={opt='USECRIPPLE', debuff=true, Gem=function(lvl) return state.emu and 6 or nil end, condition=function() return mq.TLO.SpawnCount('pc class enchanter radius 100')() == 0 and mq.TLO.Target.Named() end}},
     {Group='disdebuff', Spells={'Insidious Malady', 'Insidious Fever'}, Options={opt='USEDEBUFF', debuff=true}},
     -- EMU special: Ice Age nuke has 25% chance to proc slow
     {Group='slownuke', Spells={'Ice Age'}, Options={opt='USENUKES'}},
@@ -396,17 +397,17 @@ function Shaman:initSpellRotations()
     table.insert(self.spellRotations.standard, self.spells.breathdot)
     table.insert(self.spellRotations.standard, self.spells.nectardot)
     table.insert(self.spellRotations.standard, self.spells.cursedot)
-    -- table.insert(self.spellRotations.standard, self.spells.tcnuke1)
+    table.insert(self.spellRotations.standard, self.spells.tcnuke1)
     table.insert(self.spellRotations.standard, self.spells.bitenuke)
-    -- table.insert(self.spellRotations.standard, self.spells.tcnuke2)
+    table.insert(self.spellRotations.standard, self.spells.tcnuke2)
 
     table.insert(self.spellRotations.hybrid, self.spells.chaotic)
     table.insert(self.spellRotations.hybrid, self.spells.breathdot)
     table.insert(self.spellRotations.hybrid, self.spells.nectardot)
     table.insert(self.spellRotations.hybrid, self.spells.cursedot)
-    -- table.insert(self.spellRotations.hybrid, self.spells.tcnuke1)
+    table.insert(self.spellRotations.hybrid, self.spells.tcnuke1)
     table.insert(self.spellRotations.hybrid, self.spells.bitenuke)
-    -- table.insert(self.spellRotations.hybrid, self.spells.tcnuke2)
+    table.insert(self.spellRotations.hybrid, self.spells.tcnuke2)
     table.insert(self.spellRotations.hybrid, self.spells.poisonnuke)
     table.insert(self.spellRotations.hybrid, self.spells.icenuke)
 
@@ -416,7 +417,7 @@ function Shaman:initSpellRotations()
     table.insert(self.spellRotations.dps, self.spells.pandemiccombo)
     table.insert(self.spellRotations.dps, self.spells.malodot)
     table.insert(self.spellRotations.dps, self.spells.cursedot)
-    -- table.insert(self.spellRotations.dps, self.spells.tcnuke1)
+    table.insert(self.spellRotations.dps, self.spells.tcnuke1)
     table.insert(self.spellRotations.dps, self.spells.bitenuke)
     table.insert(self.spellRotations.dps, self.spells.poisonnuke)
     table.insert(self.spellRotations.dps, self.spells.icenuke)
@@ -441,12 +442,12 @@ Shaman.Abilities = {
     {
         Type='Item',
         Name='Blessed Spiritstaff of the Heyokah',
-        Options={first=true, opt='USEEPIC'}
+        Options={first=true, epicburn=true, opt='USEEPIC'}
     },
     {
         Type='Item',
         Name='Crafted Talisman of Fates',
-        Options={first=true, opt='USEEPIC'}
+        Options={first=true, epicburn=true, opt='USEEPIC'}
     },
     {
         Type='AA',
@@ -462,6 +463,11 @@ Shaman.Abilities = {
         Type='AA',
         Name='Dampen Resistance',
         Options={first=true}
+    },
+    {
+        Type='AA',
+        Name='Spirit Call',
+        Options={first=true, delay=1500}
     },
     -- table.insert(self.burnAbilities, common.getItem('Blessed Spiritstaff of the Heyokah'), {first=true}) -- 2.0 click
     -- table.insert(self.burnAbilities, self:addAA('Spire of Ancestors'), {first=true}) -- inc total healing, dot crit
@@ -484,7 +490,7 @@ Shaman.Abilities = {
     {
         Type='AA',
         Name='Union of Spirits',
-        Options={panic=true, tank=true, pet=30, heal=true}
+        Options={alias='UNION', panic=true, tank=true, pet=30, heal=true}
     },
 
     -- Buffs

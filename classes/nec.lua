@@ -13,7 +13,7 @@ local widgets = require('libaqo.widgets')
 local Necromancer = class:new()
 
 function Necromancer:init()
-    self.classOrder = {'assist', 'aggro', 'mash', 'debuff', 'cast', 'burn', 'recover', 'rez', 'buff', 'rest', 'managepet'}
+    self.classOrder = {'assist', 'aggro', 'mash', 'debuff', 'burn', 'cast', 'recover', 'rez', 'buff', 'rest', 'managepet'}
     self.spellRotations = {standard={},short={},custom={}}
     self:initBase('NEC')
 
@@ -216,17 +216,17 @@ function Necromancer:initSpellRotations()
     table.insert(self.spellRotations.standard, self.spells.pyreshort)
     table.insert(self.spellRotations.standard, self.spells.venom)
     table.insert(self.spellRotations.standard, self.spells.magic)
-    table.insert(self.spellRotations.standard, self.spells.synergy)
-    table.insert(self.spellRotations.standard, self.spells.manatap)
     table.insert(self.spellRotations.standard, self.spells.combodisease)
     table.insert(self.spellRotations.standard, self.spells.haze)
     table.insert(self.spellRotations.standard, self.spells.grasp)
     table.insert(self.spellRotations.standard, self.spells.fireshadow)
     table.insert(self.spellRotations.standard, self.spells.leech)
     table.insert(self.spellRotations.standard, self.spells.pyrelong)
+    table.insert(self.spellRotations.standard, self.spells.synergy)
     table.insert(self.spellRotations.standard, self.spells.ignite)
     table.insert(self.spellRotations.standard, self.spells.scourge)
     table.insert(self.spellRotations.standard, self.spells.corruption)
+    table.insert(self.spellRotations.standard, self.spells.manatap)
 
     table.insert(self.spellRotations.short, self.spells.swarm)
     table.insert(self.spellRotations.short, self.spells.alliance)
@@ -292,7 +292,7 @@ Necromancer.Abilities = {
     { -- song, Duskfall Empowerment, 10 minute CD
         Type='AA',
         Name='Gathering Dusk',
-        Options={}
+        Options={alias='DUSK'}
     },
     { -- 10 minute CD
         Type='AA',
@@ -374,7 +374,7 @@ Necromancer.Abilities = {
     {
         Type='AA',
         Name='Death\'s Effigy',
-        Options={key='deathseffigy', fade=true, opt='USEFD', postcast=function() mq.delay(1000) mq.cmd('/stand') mq.cmd('/makemevis') end}
+        Options={key='deathseffigy', fade=true, opt='USEFD', postcast=function() mq.delay(500) mq.cmd('/stand') mq.cmd('/makemevis') end}
     },
     {
         Type='AA',
@@ -597,7 +597,7 @@ function Necromancer:recover()
     common.checkMana()
     if constants.DMZ[mq.TLO.Zone.ID()] then return end
     local pct_mana = mq.TLO.Me.PctMana()
-    if self.deathbloom and pct_mana < 65 then
+    if self.deathbloom and pct_mana < 65 and mq.TLO.Me.CombatState() == 'COMBAT' then
         -- death bloom at some %
         self.deathbloom:use()
     end
@@ -625,40 +625,6 @@ local function safeToStand()
         return true
     else
         return false
-    end
-end
-
-local checkAggroTimer = timer:new(10000)
-function Necromancer:aggroOld()
-    if state.emu then return end
-    if mode.currentMode:isManualMode() then return end
-    if self:isEnabled('USEFD') and mq.TLO.Me.CombatState() == 'COMBAT' and mq.TLO.Target() then
-        if mq.TLO.Me.TargetOfTarget.ID() == mq.TLO.Me.ID() or checkAggroTimer:expired() then
-            if self.deathseffigy and mq.TLO.Me.PctAggro() >= 90 then
-                if self.dyinggrasp and mq.TLO.Me.PctHPs() < 40 and mq.TLO.Me.AltAbilityReady('Dying Grasp')() then
-                    self.dyinggrasp:use()
-                end
-                self.deathseffigy:use()
-                if mq.TLO.Me.Feigning() then
-                    checkAggroTimer:reset()
-                    mq.delay(500)
-                    if safeToStand() then
-                        mq.TLO.Me.Sit() -- Use a sit TLO to stand up, what wizardry is this?
-                        mq.cmd('/makemevis')
-                    end
-                end
-            elseif self.deathpeace and mq.TLO.Me.PctAggro() >= 70 then
-                self.deathpeace:use()
-                if mq.TLO.Me.Feigning() then
-                    checkAggroTimer:reset()
-                    mq.delay(500)
-                    if safeToStand() then
-                        mq.TLO.Me.Sit() -- Use a sit TLO to stand up, what wizardry is this?
-                        mq.cmd('/makemevis')
-                    end
-                end
-            end
-        end
     end
 end
 

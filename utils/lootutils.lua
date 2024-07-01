@@ -586,7 +586,7 @@ local function lootCorpse(corpseID)
                 local itemRule, qKeep, newRule = getRule(corpseItem)
                 local stackable = corpseItem.Stackable()
                 local freeStack = corpseItem.FreeStack()
-                if beeploots[corpseItem.Name()] then mq.cmd('/beep') end
+                if beeploots[corpseItem.Name()] or (mq.TLO.Zone.ShortName() == 'sebilis' and (corpseItem.Name():find('Forsaken') or corpseItem.Name():find('Bloodstained'))) then mq.cmdf('/dga /pop 5 %s', corpseItem.Name()) end
                 if corpseItem.Lore() then
                     local haveItem = mq.TLO.FindItem(('=%s'):format(corpseItem.Name()))()
                     local haveItemBank = mq.TLO.FindItemBank(('=%s'):format(corpseItem.Name()))()
@@ -631,7 +631,7 @@ local function lootCorpse(corpseID)
             for _,loreItem in ipairs(loreItems) do
                 skippedItems = skippedItems .. ' ' .. loreItem .. ' (lore) '
             end
-            mq.cmdf(skippedItems, loot.LootChannel, corpseName, corpseID)
+            mq.cmdf(skippedItems, 'gu', corpseName, corpseID)
         end
         if #allItems > 0 then
             -- send to self and others running lootnscoot
@@ -697,17 +697,22 @@ function loot.lootMyCorpse()
     end
     if mq.TLO.Window('LootWnd').Open() then
         mq.delay(3000, function() return mq.TLO.Corpse.Items() and mq.TLO.Corpse.Items() > 0 end)
+
         local items = mq.TLO.Corpse.Items() or 0
         if items > 0 then
-            for i=1,items do
-                local corpseItem = mq.TLO.Corpse.Item(i)
-                if corpseItem() then
-                    mq.cmdf('/nomodkey /shift /itemnotify loot%s rightmouseup', i)
-                    mq.delay(250, function() return not mq.TLO.Corpse.Item(i)() or not mq.TLO.Window('LootWnd').Open() end)
-                    mq.delay(50)
-                    if not mq.TLO.Window('LootWnd').Open() then return end
-                end
-            end
+            -- mq.cmd('/nomodkey /notify LootWnd LW_LootAllButton leftmouseup')
+            mq.cmd('/lootall')
+            mq.delay(30000, function() return not mq.TLO.Corpse() end)
+
+            -- for i=1,items do
+            --     local corpseItem = mq.TLO.Corpse.Item(i)
+            --     if corpseItem() then
+            --         mq.cmdf('/nomodkey /shift /itemnotify loot%s rightmouseup', i)
+            --         mq.delay(250, function() return not mq.TLO.Corpse.Item(i)() or not mq.TLO.Window('LootWnd').Open() end)
+            --         mq.delay(50)
+            --         if not mq.TLO.Window('LootWnd').Open() then return end
+            --     end
+            -- end
             --mq.cmd('/notify LootWnd LW_LootAllButton leftmouseup')
             --mq.delay(30000, function() return not mq.TLO.Window('LootWnd').Open() end)
         end

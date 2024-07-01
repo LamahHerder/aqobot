@@ -9,7 +9,7 @@ local Berserker = class:new()
     http://forums.eqfreelance.net/index.php?topic=10213.0
 ]]
 function Berserker:init()
-    self.classOrder = {'assist', 'ae', 'mash', 'burn', 'recover', 'buff', 'rest', 'rez'}
+    self.classOrder = {'assist', 'ae', 'mash', 'aggro', 'burn', 'recover', 'buff', 'rest', 'rez'}
     self:initBase('BER')
 
     self:initClassOptions()
@@ -95,12 +95,6 @@ Berserker.Abilities = {
         Type='Skill',
         Name='Frenzy',
         Options={emu=true, dps=true}
-    },
-    {
-        Type='Disc',
-        Group='scream',
-        Names={'Bewildering Scream'},
-        Options={emu=true, dps=true, condition=function() return not mq.TLO.Target.Buff('Bewildering Scream')() end}
     },
 
     { -- AE Attack, 3 min cd, timer 1
@@ -200,6 +194,12 @@ Berserker.Abilities = {
         Names={'Ancient: Cry of Chaos'},
         Options={first=true, condition=function() return not mq.TLO.Me.Song('Ancient: Cry of Chaos')() end}
     },
+    {
+        Type='Disc',
+        Group='scream',
+        Names={'Bewildering Scream'},
+        Options={emu=true, first=true, condition=function() return not mq.TLO.Target.Buff('Bewildering Scream')() end}
+    },
     -- Secondary Burn - Cleaving Acrimony, Reckless Abandon, Shaman Epic, Epic 2.0
     { -- Increase Hit Damage by 66%, 10 min cd, timer 18
         Type='AA',
@@ -242,7 +242,7 @@ Berserker.Abilities = {
     { -- only click outside burns
         Type='Item',
         Name='Raging Taelosian Alloy Axe',
-        Options={opt='USEEPIC', third=true, first=true, second=true}
+        Options={opt='USEEPIC', third=true, first=true, second=true, epicburn=true}
     },
     -- extra burns
     { -- Timer 21 with Mangling, Increase Chance to Critical Hit with all weapon skills by 53%, Increase Chance to Critical Hit with Frenzy by 53%, Increase Base Hit Damage by 11%

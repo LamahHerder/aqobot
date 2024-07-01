@@ -84,6 +84,7 @@ local state     = require('state')
 ---@field recoverClass?             function #Function to perform class specific recover logic
 ---@field checkSpellSet?            function #Function to load class spell sets
 ---@field swapSpells?               function #Function to perform class specific checks for spell swapping in combat (necro stuff)
+---@field handleRampage?            function #Function to handle being rampage tank in a class specific manner
 local base = {
     -- All possible class routine methods
     options = {},
@@ -91,6 +92,7 @@ local base = {
     DPSAbilities = {},
     tankAbilities = {},
     burnAbilities = {},
+    preburnAbilities = {},
     rangedBurnAbilities = {},
     tankBurnAbilities = {},
     healAbilities = {},
@@ -139,6 +141,8 @@ end
 --- @param tip string|nil # Hover  help message for the setting
 --- @param type string # The UI element type (combobox, checkbox, inputint)
 --- @param exclusive string|nil # The key of another option which is mutually exclusive with this option
+--- @param tlo string|nil # The TLO Field name for this option
+--- @param tlotype string|nil # The TLO Field data type for this option
 function base:addOption(key, label, value, options, tip, type, exclusive, tlo, tlotype)
     if not self.options[key] then
         table.insert(self.options, key)
@@ -165,6 +169,7 @@ function base:addCommonOptions()
     if not state.emu then self:addOption('USEALLIANCE', 'Use Alliance', true, nil, 'Use alliance spell', 'checkbox', nil, 'UseAlliance', 'bool') end
     if constants.manaClasses[self.class] then
         self:addOption('USEMELEE', 'Use Melee', false, nil, 'Toggle attacking mobs with melee', 'checkbox', nil, 'UseMelee', 'bool')
+        self:addOption('DOTNAMEDONLY', 'DoT Named Only', false, nil, 'Toggle only casting DoTs on named mobs', 'checkbox', nil, 'DotNamedOnly', 'bool')
     end
     if constants.petClasses[self.class] then
         self:addOption('SUMMONPET', 'Summon Pet', true, nil, 'Summon a pet', 'checkbox', nil, 'SummonPet', 'bool')
@@ -189,7 +194,7 @@ function base:addCommonAbilities()
     self.radiant = self:addAA('Radiant Cure', {all=true, ignoreCounters=true, alias='RC', cure=true, group=true})
     if self.radiant then self:addAbilityToLists(self.radiant) end
     -- table.insert(self.cures, self.radiant)
-    self.silent = self:addAA('Silent Casting', {first=true})
+    self.silent = self:addAA('Silent Casting', {first=true, preburn=true})
     if self.silent then self:addAbilityToLists(self.silent) end
     -- table.insert(self.burnAbilities, self.silent)
     self.mgb = self:addAA('Mass Group Buff')
@@ -206,6 +211,13 @@ function base:addCommonAbilities()
         table.insert(self.burnAbilities, self:addAA('Empowered Focus of Arcanum', {first=true}))
         table.insert(self.combatBuffs, self:addAA('Acute Focus of Arcanum', {skipifbuff='Enlightened Focus of Arcanum', combatbuff=true}))
         table.insert(self.combatBuffs, self:addAA('Enlightened Focus of Arcanum', {skipifbuff='Acute Focus of Arcanum', combatbuff=true}))
+
+        self.armorexp = self:addAA('Armor of Experience', {alias='armorexp'})
+        self.lifeglyph = self:addAA('Glyph of Stored Life', {alias='lifeglyph'})
+        self.angryglyph = self:addAA('Glyph of Angry Thoughts', {alias='angryglyph'})
+        self.courageglyph = self:addAA('Glyph of Courage', {alias='courageglyph'})
+
+        self.manaPotion = common.getItem('Draught of the Clear Mind I')
     end
     for _,buffline in ipairs(constants.bufflines) do
         if self.desiredBuffs[buffline.key] == nil then
@@ -305,6 +317,7 @@ local flagToTableMap = {
     first = 'burnAbilities',
     second = 'burnAbilities',
     third = 'burnAbilities',
+    epicburn = 'burnAbilities',
     burn = 'burnAbilities',
     rangeburn = 'rangedBurnAbilities',
     tanking = 'tankAbilities',
@@ -322,7 +335,7 @@ local flagToTableMap = {
     cure = 'cures',
     debuff = 'debuffs',
     aggroreducer = 'aggroReducers',
-    preburn = 'preburn',
+    preburn = 'preburnAbilities',
 }
 
 local exclude_keys = {['Gem']=true}
@@ -388,6 +401,7 @@ function base:getTableForClicky(clickyType)
     elseif clickyType == 'heal' then
         return self.healAbilities
     elseif clickyType == 'mana' then
+        return self.recoverAbilities
     elseif clickyType == 'dispel' then
     elseif clickyType == 'cure' then
     elseif clickyType == 'combatbuff' then
@@ -400,6 +414,10 @@ function base:getTableForClicky(clickyType)
         return self.pullClickies
     elseif clickyType == 'debuff' then
         return self.debuffs
+    elseif clickyType == 'summon' then
+        return self.selfBuffs
+    elseif clickyType == 'defensive' then
+        return self.defensiveAbilities
     else
         logger.info('Unknown clicky type: %s', clickyType)
         return nil
@@ -571,7 +589,7 @@ function base:assist()
         end
         assist.sendPet()]]
     end
-    if state.forceEngage then assist.sendPet() end
+    if state.forceEngage or (mode.currentMode:isManualMode() and config.get('MAINTANK') and mq.TLO.Me.Combat() and (mq.TLO.Target.PctHPs() or 100) < 95) then assist.sendPet() end
 end
 
 function base:tank()
@@ -629,6 +647,7 @@ function base:doCombatLoop(list, burn_type)
                 (ability.maxdistance == nil or dist <= ability.maxdistance) and
                 (ability.usebelowpct == nil or mobhp <= ability.usebelowpct) and
                 (burn_type == nil or ability[burn_type]) and
+                (ability.enabled == nil or (ability.enabled and mobhp < 97)) and
                 (ability.aggro == nil or aggropct < 100) then
             if ability:use() then
                 mq.delay(ability.delay or 200)
@@ -672,7 +691,7 @@ function base:mash()
         else
             self:doCombatLoop(self.DPSAbilities)
         end
-        if self.class ~= 'BRD' then self:doMashClickies() end
+        if self.class ~= 'BRD' and (mq.TLO.Target.PctHPs() or 100) < 97 then self:doMashClickies() end
     end
 end
 
@@ -695,6 +714,10 @@ function base:ae()
             self:doCombatLoop(self.AEDPSAbilities)
         end
     end
+end
+
+function base:preburn()
+    self:doCombatLoop(self.preburnAbilities)
 end
 
 function base:burn()
@@ -752,7 +775,10 @@ function base:findNextSpell()
 end
 
 function base:debuff()
-    if mq.TLO.Target.ID() == mq.TLO.Me.ID() or mq.TLO.Target.Type() ~= 'NPC' then return end
+    local targetType = mq.TLO.Target.Type()
+    local masterType = mq.TLO.Target.Master.Type()
+    local isNPC = targetType == 'NPC' or (targetType == 'Pet' and masterType == 'NPC')
+    if mq.TLO.Target.ID() == mq.TLO.Me.ID() or not isNPC then return end
     if self:isEnabled('DEBUFFONPULL') or assist.isFighting() then
         if not debuff.castDebuffs() then
             if self:isEnabled('SLOWALL') then
@@ -768,11 +794,16 @@ function base:cast()
     if mq.TLO.Me.SpellInCooldown() or self:isEnabled('DONTCAST') or mq.TLO.Me.Invis() then return end
     if state.medding and config.get('MEDCOMBAT') then return end
     --if assist.isFighting() and mq.TLO.Target.ID() ~= mq.TLO.Me.ID() then
-    if mq.TLO.Target.Type() == 'NPC' and assist.isFighting() and (mq.TLO.Target.ID() == state.assistMobID or mq.TLO.Target.ID() == state.tankMobID or mode.currentMode:isManualMode()) then
+    local targetType = mq.TLO.Target.Type()
+    local masterType = mq.TLO.Target.Master.Type()
+    local isNPC = targetType == 'NPC' or (targetType == 'Pet' and masterType == 'NPC')
+    if isNPC and assist.isFighting() and (mq.TLO.Target.ID() == state.assistMobID or mq.TLO.Target.ID() == state.tankMobID or mode.currentMode:isManualMode()) then
         if state.nuketimer:expired() then
-            for _,clicky in ipairs(self.castClickies) do
-                if mq.TLO.Target.Type() == 'NPC' and clicky.enabled and self:isAbilityEnabled(clicky.opt) and (clicky.DurationTotalSeconds == 0 or not mq.TLO.Target.Buff(clicky.CheckFor)()) and not mq.TLO.Me.Moving() then
-                    if clicky:use() then return end
+            if (mq.TLO.Target.PctHPs() or 100) < 97 then
+                for _,clicky in ipairs(self.castClickies) do
+                    if isNPC and clicky.enabled and self:isAbilityEnabled(clicky.opt) and (clicky.DurationTotalSeconds == 0 or not mq.TLO.Target.Buff(clicky.CheckFor)()) and not mq.TLO.Me.Moving() then
+                        if clicky:use() then return end
+                    end
                 end
             end
             local spell, index = self:findNextSpell()
@@ -792,7 +823,7 @@ function base:cast()
         -- nec multi dot stuff
         if self:isEnabled('MULTIDOT') then
             local original_target_id = 0
-            if mq.TLO.Target.Type() == 'NPC' then original_target_id = mq.TLO.Target.ID() end
+            if isNPC then original_target_id = mq.TLO.Target.ID() end
             local dotted_count = 1
             for i=1,20 do
                 if mq.TLO.Me.XTarget(i).TargetType() == 'Auto Hater' and mq.TLO.Me.XTarget(i).Type() == 'NPC' then
@@ -838,15 +869,21 @@ function base:wantBuffs()
         end
     end
     for desiredBuff,enabled in pairs(self.desiredBuffs) do
-        if enabled then
+        if enabled and desiredBuff ~= 'FPARAGON' then
             if (not mq.TLO.Me.Buff(allBuffs[desiredBuff])() or (mq.TLO.Me.Buff(allBuffs[desiredBuff]).Duration() or 0) < 60000)
                     and (mq.TLO.Spell(allBuffs[desiredBuff]).WillLand() or 0) > 0 then
-                table.insert(request, desiredBuff)
+                -- edge case for frantic flames tiered style buff
+                if not allBuffs[desiredBuff]:find('Flames') or not mq.TLO.Me.Buff('Flames')() then
+                    table.insert(request, desiredBuff)
+                end
             end
         end
     end
     if constants.tankClasses[mq.TLO.Me.Class.ShortName()] and mq.TLO.Me.Combat() and allBuffs.HOT and (not mq.TLO.Me.Song(allBuffs.HOT)() or (mq.TLO.Me.Song(allBuffs.HOT).Duration() or 0) < 6000) then
         table.insert(request, 'HOT')
+    end
+    if mq.TLO.Me.Combat() and mq.TLO.Me.Class.CanCast() and (mq.TLO.Me.PctMana() or 100) < 50 and not mq.TLO.Me.Song('Paragon of Spirit')() and allBuffs.FPARAGON then
+        table.insert(request, 'FPARAGON')
     end
     return request
 end
@@ -870,7 +907,7 @@ function base:aggro()
     if mode.currentMode:isManualMode() or tank.isTank() then return end
     local pctAggro = mq.TLO.Me.PctAggro() or 0
     -- 1. Am i on aggro? Use fades or defensives immediately
-    if mq.TLO.Target() and mq.TLO.Me.TargetOfTarget.ID() == mq.TLO.Me.ID() and mq.TLO.Target.Named() then
+    if mq.TLO.Target() and mq.TLO.Me.TargetOfTarget.ID() == mq.TLO.Me.ID() and (mq.TLO.Target.Level() or 0) > mq.TLO.Me.Level() then
         local useDefensives = true
         -- if self.useCommonListProcessor then
         --     if common.processList(self.fadeAbilities, self, true) then return
@@ -955,6 +992,8 @@ function base:recover()
                 elseif ability.endurance and pct_end < (ability.threshold or config.get('RECOVERPCT')) and (ability.combat or combat_state ~= 'COMBAT') and (not ability.minhp or mq.TLO.Me.PctHPs() > ability.minhp) then
                     useAbility = ability
                     break
+                elseif not ability.mana and not ability.endurance and pct_mana < config.get('RECOVERPCT') then
+                    useAbility = ability
                 end
             end
         end
@@ -988,6 +1027,8 @@ function base:managepet()
     if petSpell.ReagentID and mq.TLO.FindItemCount(petSpell.ReagentID)() < petSpell.ReagentCount then return end
     abilities.swapAndCast(petSpell, state.swapGem, self)
     state.queuedAction = function() mq.cmd('/pet ghold on') end
+    state.queuedActionTimer:reset()
+    state.queuedActionTimer.expiration = 20000
 end
 
 function base:hold()
@@ -1027,7 +1068,7 @@ function base:handleRequests()
             table.remove(self.requests, 1)
         else
             local requesterSpawn = '='..request.requester
-            if tonumber(request.requester) then
+            if tonumber(request.requester) and tonumber(request.requester) ~= math.huge then
                 requesterSpawn = 'id '..request.requester
             end
             local requesterSpawn = mq.TLO.Spawn(requesterSpawn)
@@ -1052,12 +1093,13 @@ function base:handleRequests()
                             --if self.tranquil:use() then tranquilUsed = '/rs MGB\'ing' end
                             mq.cmdf('/alt act %s', self.tranquil.ID)
                             tranquilUsed = '/rs MGB\'ing'
+                            mq.delay(250)
                         end
                     elseif request.mgb then
                         if not mq.TLO.Me.AltAbilityReady('Mass Group Buff')() then
                             return
                         elseif self.mgb then
-                            if self.mgb:use() then tranquilUsed = '/rs MGB\'ing' end
+                            if self.mgb:use() then tranquilUsed = '/rs MGB\'ing' mq.delay(250) end
                         end
                     end
                     movement.stop()
@@ -1077,7 +1119,7 @@ function base:handleRequests()
 end
 
 local function lifesupport()
-    if mq.TLO.Me.CombatState() == 'COMBAT' and not mq.TLO.Me.Invis() and not mq.TLO.Me.Casting() and mq.TLO.Me.Standing() and mq.TLO.Me.PctHPs() < 60 then
+    if mq.TLO.Me.CombatState() == 'COMBAT' and not mq.TLO.Me.Invis() and not mq.TLO.Me.Casting() and mq.TLO.Me.Standing() and mq.TLO.Me.PctHPs() < 35 then
         for _,healclicky in ipairs(constants.instantHealClickies) do
             local item = mq.TLO.FindItem(healclicky)
             local spell = item.Clicky.Spell
@@ -1088,6 +1130,30 @@ local function lifesupport()
                 mq.delay(250+(castTime or 0), function() return not mq.TLO.Me.ItemReady(healclicky)() end)
                 if mq.TLO.Me.PctHPs() > 75 then return end
             end
+        end
+        for _,heal in ipairs(base.healAbilities) do
+            if heal.enabled ~= nil and heal.enabled and heal.MyCastTime == 0 then
+                if heal:use() then mq.delay(200) return true end
+            end
+        end
+    end
+end
+
+function base:handleRampage()
+    if state.class == 'BRD' or state.class == 'CLR' then
+        for _,ability in ipairs(self.fadeAbilities) do
+            if self:isAbilityEnabled(ability.opt) then
+                if ability.precast then ability.precast() end
+                if ability:use() then
+                    mq.cmdf('/rs fading to lose rampage')
+                    if ability.postcast then ability.postcast() end
+                end
+            end
+        end
+    end
+    for _,defensive in ipairs(base.defensiveAbilities) do
+        if defensive.enabled ~= nil and defensive.enabled then
+            if defensive:use() then mq.delay(250) break end
         end
     end
 end
@@ -1187,6 +1253,17 @@ function base:mainLoop()
     end
     if not state.pullStatus or state.pullStatus == constants.pullStates.PULLED then
         if state.pullStatus == constants.pullStates.PULLED then pull.clearPullVars('classloop') end
+        if state.rebuff then buffing.buff(self) end
+        if state.rampTank then
+            if state.mobCount > 0 and not state.rampAnnounced then
+                if base.handleRampage then base:handleRampage() end
+                state.rampAnnounced = true
+            end
+            if state.mobCount == 0 then
+                state.rampTank = false
+                state.rampAnnounced = false
+            end
+        end
         lifesupport()
         self:handleRequests()
         -- get mobs in camp

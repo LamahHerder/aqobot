@@ -70,6 +70,11 @@ function Rogue:initClassOptions()
 end
 
 Rogue.Abilities = {
+    { -- lazarus specific clicky pickpocket
+        Type='Item',
+        Name='Forgotten Mugger\'s Sap',
+        Options={dps=true, condition=function() return (mq.TLO.Target.Distance() or 100) < 50 and mq.TLO.Target.Body() == 'Humanoid' end}
+    },
     {
         Type='Skill',
         Name='Kick',
@@ -94,7 +99,7 @@ Rogue.Abilities = {
     {
         Type='AA',
         Name='Ligament Slice',
-        Options={dps=true, condition=conditions.withinMeleeDistance}
+        Options={first=true, condition=conditions.withinMeleeDistance}
     },
 
     {
@@ -102,16 +107,22 @@ Rogue.Abilities = {
         Name='Rogue\'s Fury',
         Options={first=true}
     },
+    -- { -- shares timer with kinesthetics, 15m cd
+    --     Type='Disc',
+    --     Group='duelist',
+    --     Names={'Duelist Discipline'},
+    --     Options={first=true}
+    -- },
+    -- { -- shares with kinesthetics, 5m cd
+    --     Type='Disc',
+    --     Group='precision',
+    --     Names={'Deadly Precision Discipline'},
+    --     Options={first=true}
+    -- },
     {
         Type='Disc',
-        Group='duelist',
-        Names={'Duelist Discipline'},
-        Options={first=true}
-    },
-    {
-        Type='Disc',
-        Group='precision',
-        Names={'Deadly Precision Discipline'},
+        Group='pinpoint',
+        Names={'Pinpoint Vulnerability'},
         Options={first=true}
     },
     {
@@ -124,6 +135,12 @@ Rogue.Abilities = {
         Type='Disc',
         Group='twisted',
         Names={'Twisted Chance Discipline'},
+        Options={first=true}
+    },
+    { -- shares timer with duelist, 5m cd
+        Type='Disc',
+        Group='kinesthetics',
+        Names={'Kinesthetics Discipline'},
         Options={first=true}
     },
     {
@@ -140,7 +157,7 @@ Rogue.Abilities = {
     {
         Type='Item',
         Name='Nightshade, Blade of Entropy',
-        Options={opt='USEEPIC', combatbuff=true, first=true}
+        Options={opt='USEEPIC', first=true, epicburn=true} -- combatbuff=true, 
     },
     {
         Type='AA',

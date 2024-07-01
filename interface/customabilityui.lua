@@ -114,7 +114,7 @@ function CustomAbilityUI:render(class)
     end
 end
 
-local abilityLists = {'dps', 'aedps', 'tanking', 'aetank', 'heal', 'burn', 'tankburn', 'first', 'second', 'third', 'selfbuff', 'singlebuff', 'aurabuff', 'petbuff', 'combatbuff', 'recover', 'cure', 'debuff'}
+local abilityLists = {'dps', 'aedps', 'tanking', 'aetank', 'heal', 'burn', 'tankburn', 'first', 'second', 'third', 'epicburn', 'selfbuff', 'singlebuff', 'aurabuff', 'petbuff', 'combatbuff', 'recover', 'cure', 'debuff'}
 local flags = {
     {'aggro', 'threshold'},
     {'combat', 'ooc', 'minhp', 'mana', 'endurance'},

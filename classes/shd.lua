@@ -27,7 +27,7 @@ local ShadowKnight = class:new()
     decrepit skin
 ]]
 function ShadowKnight:init()
-    self.classOrder = {'assist', 'cast', 'ae', 'mash', 'burn', 'recover', 'rest', 'buff', 'managepet'}
+    self.classOrder = {'assist', 'burn', 'cast', 'ae', 'mash', 'recover', 'rest', 'buff', 'managepet'}
     self.spellRotations = {standard={},dps={},custom={}}
     self:initBase('SHD')
 
@@ -40,6 +40,7 @@ function ShadowKnight:init()
     self:initSpellRotations()
     self:initAbilities()
     self:addCommonAbilities()
+    state.swapGem = 11
 
     self.pullSpell = self.spells.terror
 
@@ -120,7 +121,7 @@ ShadowKnight.SpellLines = {
     {-- lifetap dot. Slot 8
         Group='dottap',
         Spells={'Bond of Tatalros', 'Bond of Bynn', 'Bond of Inruku'},
-        Options={opt='USEDOTTAP', Gem=function(lvl) return lvl <= 70 and 3 or 8 end}
+        Options={opt='USEDOTTAP', Gem=function(lvl) return lvl <= 70 and 11 or 8 end}
     },
     {-- main hate spell. Slot 9
         Group='challenge',
@@ -145,7 +146,7 @@ ShadowKnight.SpellLines = {
     {-- Xenacious' Skin proc, 5min buff. Slot 12
         Group='skin',
         Spells={'Krizad\'s Skin', 'Xenacious\' Skin', 'Decrepit Skin', 'Vampiric Embrace'},
-        Options={Gem=function(lvl) return lvl <= 70 and 8 or 12 end, selfbuff=true}
+        Options={Gem=function(lvl) return lvl <= 70 and 8 or 12 end, selfbuff=true, combatbuff=true}
     },
     {-- lifetap with hp/mana recourse. Slot 13
         Group='bitetap',

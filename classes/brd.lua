@@ -193,6 +193,11 @@ Bard.allDPSSpellGroups = {'aria', 'arcane', 'chantfrost', 'spiteful', 'firenukeb
     'chantmagic', 'aedot', 'aeslow', 'manasong', 'dispel', 'amplification', 'selos'}
 
 Bard.Abilities = {
+    { -- lazarus specific clicky pickpocket
+        Type='Item',
+        Name='Forgotten Mugger\'s Sap',
+        Options={dps=true, condition=function() return (mq.TLO.Target.Distance() or 100) < 50 and mq.TLO.Target.Body() == 'Humanoid' end}
+    },
     {
         Type='AA',
         Name='Fierce Eye',
@@ -201,18 +206,18 @@ Bard.Abilities = {
     { -- Epic 2.0
         Type='Item',
         Name='Blade of Vesagran',
-        Options={key='epic'}
+        Options={key='epic', epicburn=true}
     },
     { -- Epic 1.5
         Type='Item',
         Name='Prismatic Dragon Blade',
-        Options={key='epic'}
+        Options={key='epic', epicburn=true}
     },
     -- Bellow handled separately as we want it to run its course and not be refreshed early
     { -- single target AA with fulmination
         Type='AA',
         Name='Boastful Bellow',
-        Options={key='bellow'}
+        Options={key='bellow', usebelowpct=97}
     },
     { -- long AA mez
         Type='AA',
@@ -292,7 +297,7 @@ Bard.Abilities = {
         Options={first=true}
     },
     {
-        Type='first=true',
+        Type='AA',
         Name='Third Spire of the Minstrels',
         Options={emu=true, first=true}
     },
@@ -325,7 +330,7 @@ Bard.Abilities = {
     {
         Type='AA',
         Name='Cacophony',
-        Options={first=true, opt='USECACOPHONY'}
+        Options={first=true, opt='USECACOPHONY', usebelowpct=97}
     },
     {
         Type='AA',
@@ -376,7 +381,7 @@ Bard.Abilities = {
     {
         Type='AA',
         Name='Fading Memories',
-        Options={fade=true, opt='USEFADE', precast=function() mq.cmd('/attack off') end, postcast=function() mq.delay(500) mq.cmd('/makemevis') mq.cmd('/attack on') end}
+        Options={fade=true, opt='USEFADE', precast=function() mq.cmd('/attack off') end, postcast=function() mq.delay(500) mq.cmd('/makemevis') end}
     },
 
     -- Recover
@@ -613,7 +618,7 @@ function Bard:cast()
             end
             for _,clicky in ipairs(self.castClickies) do
                 if clicky.enabled then
-                    if clicky.TargetType == 'Single' then
+                    if clicky.TargetType == 'Single' and (mq.TLO.Target.PctHPs() or 100) < 97 then
                         -- if single target clicky then make sure in combat
                         if (clicky.Duration == 0 or not mq.TLO.Target.Buff(clicky.CheckFor)()) then
                             if clicky:use() then
