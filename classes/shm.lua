@@ -113,6 +113,7 @@ function Shaman:initClassOptions()
     self:addOption('USECURES', 'Use Cures', true, nil, 'Toggle use of cures', 'checkbox', nil, 'UseCures', 'bool')
 end
 
+local PET_RACES = {['Rhinoceros']=true,['Scorpion']=true,['Mammoth']=true}
 Shaman.SpellLines = {
     {-- proc buff slow + heal, 240 charges. Slot 1
         Group='slowproc',
@@ -234,7 +235,7 @@ Shaman.SpellLines = {
     {-- greater poison dot. Not used directly. only by combo spell. (chaotic)
         Group='blooddot',
         Spells={'Caustic Blood', 'Desperate Vampyre Blood', 'Restless Blood', 'Scorpikis Blood', 'Reef Crawler Blood', 'Blood of Yoppa'},
-        Options={opt='USEDOTS', Gem=function() return (not Shaman.spells.chaotic and (Shaman:get('SPELLSET') == 'standard' or not Shaman:isEnabled('USEALLIANCE')) and 13) or (not Shaman.spells.chaotic and Shaman:get('SPELLSET') == 'dps' and not Shaman:isEnabled('MEMCUREALL') and 6) or nil end}
+        Options={opt='USEDOTS', Gem=function(lvl) return (not Shaman:get('USECRIPPLE') and lvl == 70 and 6) or (not Shaman.spells.chaotic and (Shaman:get('SPELLSET') == 'standard' or not Shaman:isEnabled('USEALLIANCE')) and 13) or (not Shaman.spells.chaotic and Shaman:get('SPELLSET') == 'dps' and not Shaman:isEnabled('MEMCUREALL') and 6) or nil end}
     },
     {-- keep up on tank, proc ae heal from target. Slot 13
         Group='alliance',
@@ -253,11 +254,11 @@ Shaman.SpellLines = {
     {Group='torpor', Spells={'Transcendent Torpor'}, Options={alias='HOT', hot=true, opt='USEHOTTANK'}},
     {Group='hot', Spells={'Celestial Health', 'Celestial Remedy'}, Options={}},
     {Group='idol', Spells={'Idol of Malos'}, Options={opt='USEDEBUFF', debuff=true, condition=function() return mq.TLO.Spawn('Spirit Idol')() ~= nil end}},
-    {Group='dispel', Spells={'Abashi\'s Disempowerment', 'Cancel Magic'}, Options={opt='USEDISPEL', debuff=true, Gem=function(lvl) return lvl <= 70 and 5 or nil end}},
+    {Group='dispel', Spells={'Abashi\'s Disempowerment', 'Cancel Magic'}, Options={opt='USEDISPEL', debuff=true, Gem=function(lvl) return Shaman:isEnabled('USEDISPEL') and lvl <= 70 and 5 or nil end}},
     {Group='debuff', Spells={'Crippling Spasm', 'Listless Power', 'Disempower'}, Options={opt='USECRIPPLE', debuff=true, Gem=function(lvl) return state.emu and 6 or nil end, condition=function() return mq.TLO.SpawnCount('pc class enchanter radius 100')() == 0 and mq.TLO.Target.Named() end}},
     {Group='disdebuff', Spells={'Insidious Malady', 'Insidious Fever'}, Options={opt='USEDEBUFF', debuff=true}},
     -- EMU special: Ice Age nuke has 25% chance to proc slow
-    {Group='slownuke', Spells={'Ice Age'}, Options={opt='USENUKES'}},
+    {Group='slownuke', Spells={'Ice Age'}, Options={opt='USENUKES', Gem=function(lvl) return mq.TLO.FindItem('Forsaken Jaundiced Bone Bracer')() and 2 or nil end}},
 
     -- Debuffs
     {-- Malo spell line. AA malo is Malosinete
@@ -282,18 +283,18 @@ Shaman.SpellLines = {
 
     -- Buffs
     {Group='proc', Spells={'Spirit of the Leopard', 'Spirit of the Jaguar'}, Options={classes={MNK=true,BER=true,ROG=true,BST=true,WAR=true,PAL=true,SHD=true}, singlebuff=true}},
-    {Group='champion', Spells={'Champion', 'Ferine Avatar'}, Options={Gem=function(lvl) return lvl <= 70 and 2 or nil end, alias='CHAMPION', combatbuffothers=true}},
+    {Group='champion', Spells={'Champion', 'Ferine Avatar'}, Options={Gem=function(lvl) return not mq.TLO.FindItem('Forsaken Jaundiced Bone Bracer')() and lvl <= 70 and 2 or nil end, alias=not mq.TLO.FindItem('Forsaken Jaundiced Bone Bracer')() and 'CHAMPION', combatbuffothers=true}},
     {Group='panther', Spells={'Talisman of the Panther'}, Options={selfbuff=function() return not mq.TLO.FindItem('Imbued Rune of the Panther')() and true or false end}},
     -- {Group='talisman', Spells={'Talisman of Unification'}, Options={group=true, self=true, classes={WAR=true,SHD=true,PAL=true}})
     -- {Group='focus', Spells={'Talisman of Wunshi'}, Options={classes={WAR=true,SHD=true,PAL=true}})
     {Group='evasion', Spells={'Talisman of Unification'}, Options={self=true, classes={WAR=true,SHD=true,PAL=true}}},
     {Group='singlefocus', Spells={'Heroic Focusing', 'Vampyre Focusing', 'Kromrif Focusing', 'Wulthan Focusing', 'Doomscale Focusing'}},
     {Group='singleunity', Spells={'Unity of the Heroic', 'Unity of the Vampyre', 'Unity of the Kromrif', 'Unity of the Wulthan', 'Unity of the Doomscale', --[[emu cutoff]] 'Talisman of Attuna', 'Talisman of Tnarg', 'Inner Fire'}, Options={alias='SINGLEFOCUS'}},
-    {Group='groupunity', Spells={'Talisman of the Heroic', 'Talisman of the Usurper', 'Talisman of the Ry\'Gorr', 'Talisman of the Wulthan', 'Talisman of the Doomscale', 'Talisman of Wunshi'}, Options={selfbuff=true, alias='FOCUS'}},
+    {Group='groupunity', Spells={'Talisman of the Heroic', 'Talisman of the Usurper', 'Talisman of the Ry\'Gorr', 'Talisman of the Wulthan', 'Talisman of the Doomscale', 'Talisman of Wunshi'}, Options={selfbuff=true, alias='FOCUS', condition=function() return mq.TLO.Me.Level() < 70 end}},
 
     -- Utility
     {Group='canni', Spells={'Cannibalize IV', 'Cannibalize III', 'Cannibalize II', 'Cannibalize'}, Options={Gem=function(lvl) return lvl <= 60 and 8 or nil end, recover=true, mana=true, threshold=70, combat=false, endurance=false, minhp=50, ooc=false}},
-    {Group='pet', Spells={'Commune with the Wild', 'True Spirit', 'Frenzied Spirit', 'Vigilant Spirit', 'Companion Spirit'}, Options={Gem=function(lvl) return lvl <= 70 and 12 or nil end, opt='SUMMONPET'}},
+    {Group='pet', Spells={'Commune with the Wild', 'True Spirit', 'Frenzied Spirit', 'Vigilant Spirit', 'Companion Spirit'}, Options={Gem=function(lvl) return lvl <= 70 and 12 or nil end, opt='SUMMONPET', postcast=function() if Shaman.spells.pet.CastName == 'Commune with the Wild' and not PET_RACES[mq.TLO.Pet.Race.Name()] then mq.cmd('/pet leave') end end}},
     {Group='sow', Spells={'Spirit of the Shrew', 'Spirit of Wolf'}, Options={}},
     {Group='shrink', Spells={'Shrink'}, Options={alias='SHRINK'}},
     {Group='petshrink', Spells={'Tiny Companion'}, Options={}},
@@ -394,10 +395,12 @@ function Shaman:initSpellRotations()
     end
 
     table.insert(self.spellRotations.standard, self.spells.chaotic)
+    table.insert(self.spellRotations.standard, self.spells.blooddot)
     table.insert(self.spellRotations.standard, self.spells.breathdot)
     table.insert(self.spellRotations.standard, self.spells.nectardot)
     table.insert(self.spellRotations.standard, self.spells.cursedot)
     table.insert(self.spellRotations.standard, self.spells.tcnuke1)
+    table.insert(self.spellRotations.standard, self.spells.poisonnuke)
     table.insert(self.spellRotations.standard, self.spells.bitenuke)
     table.insert(self.spellRotations.standard, self.spells.tcnuke2)
 

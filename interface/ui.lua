@@ -462,6 +462,8 @@ end
 local TABLE_FLAGS = bit32.bor(ImGuiTableFlags.ScrollY,ImGuiTableFlags.RowBg,ImGuiTableFlags.BordersOuter,ImGuiTableFlags.BordersV,ImGuiTableFlags.SizingStretchSame,ImGuiTableFlags.Sortable,
                                 ImGuiTableFlags.Hideable, ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable)
 
+local debugFilter = ''
+
 local function drawNestedTableTree(table)
     for k, v in pairs(table) do
         ImGui.TableNextRow()
@@ -481,26 +483,38 @@ local function drawNestedTableTree(table)
     end
 end
 
-local function drawTableTree(table)
+local function matchFilters(k, filters)
+    for filter,_ in pairs(filters) do
+        if k:lower():find(filter) then return true end
+    end
+end
+
+local function drawTableTree(table, filter)
+    local filters = nil
+    if filter then
+        filters = helpers.splitSet(filter:lower(), '|')
+    end
     if ImGui.BeginTable('StateTable', 2, TABLE_FLAGS, -1, -1) then
         ImGui.TableSetupScrollFreeze(0, 1)
         ImGui.TableSetupColumn('Key', ImGuiTableColumnFlags.None, 2, 1)
         ImGui.TableSetupColumn('Value', ImGuiTableColumnFlags.None, 2, 2)
         ImGui.TableHeadersRow()
         for k, v in pairs(table) do
-            ImGui.TableNextRow()
-            ImGui.TableNextColumn()
-            if type(v) == 'table' then
-                local open = ImGui.TreeNodeEx(k, ImGuiTreeNodeFlags.SpanFullWidth)
-                if open then
-                    drawNestedTableTree(v)
-                    ImGui.TreePop()
+            if not filters or matchFilters(k, filters) then
+                ImGui.TableNextRow()
+                ImGui.TableNextColumn()
+                if type(v) == 'table' then
+                    local open = ImGui.TreeNodeEx(k, ImGuiTreeNodeFlags.SpanFullWidth)
+                    if open then
+                        drawNestedTableTree(v)
+                        ImGui.TreePop()
+                    end
+                elseif type(v) ~= 'function' then
+                    ImGui.TextColored(YELLOW, '%s', k)
+                    ImGui.TableNextColumn()
+                    ImGui.TextColored(RED, '%s', v)
+                    ImGui.TableNextColumn()
                 end
-            elseif type(v) ~= 'function' then
-                ImGui.TextColored(YELLOW, '%s', k)
-                ImGui.TableNextColumn()
-                ImGui.TextColored(RED, '%s', v)
-                ImGui.TableNextColumn()
             end
         end
         ImGui.EndTable()
@@ -736,7 +750,8 @@ local function drawStateInspector()
     if stateGUIOpen then
         stateGUIOpen, shouldDrawStateGUI = ImGui.Begin(('State Inspector##AQOBOTUI%s'):format(state.class), stateGUIOpen)
         if shouldDrawStateGUI then
-            drawTableTree(state)
+            debugFilter = ImGui.InputTextWithHint('##debugfilter', 'Filter...', debugFilter)
+            drawTableTree(state, debugFilter ~= '' and debugFilter)
         end
         ImGui.End()
     end

@@ -209,8 +209,9 @@ end
 ---@param spell MQSpell # The spell userdata of the spell to use
 ---@param spellTable Ability # The table of configuration related to the spell
 ---@param skipReagentCheck? boolean # Indicates whether to skip checking if enough reagents are present, some spell data seems to incorrectly indicate reagents needed
+---@param skipCastingCheck? boolean # Indicates whether to skip checking if already casting, for routines which will interrupt like emergency heals
 ---@return IsReady # Returns IsReady.CAN_CAST or another IsReady value indicating why the spell can't be cast
-function Ability.canUseSpell(spell, spellTable, skipReagentCheck)
+function Ability.canUseSpell(spell, spellTable, skipReagentCheck, skipCastingCheck)
     logger.debug(logger.flags.ability.validation, 'ENTER canUseSpell \ag%s\ax', spell.Name())
     local abilityType = spellTable.CastType
     if not spellTable.timer:expired() then return IsReady.NOT_READY end
@@ -219,20 +220,22 @@ function Ability.canUseSpell(spell, spellTable, skipReagentCheck)
             logger.debug(logger.flags.ability.validation, 'Spell not memorized (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
             return IsReady.NOT_MEMMED
         end
-        if not mq.TLO.Me.SpellReady(spell.Name())() then
+        if not skipCastingCheck and not mq.TLO.Me.SpellReady(spell.Name())() then
             logger.debug(logger.flags.ability.validation, 'Spell not ready (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
             return IsReady.NOT_READY
         end
     end
-    if state.class ~= 'BRD' then
-        if mq.TLO.Me.Casting() or ((spellTable.MyCastTime or 0) > 0 and mq.TLO.Me.Moving()) then
-            logger.debug(logger.flags.ability.validation, 'Not in control or moving (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
-            return IsReady.BUSY
-        end
-    else
-        if mq.TLO.Me.Casting() and spellTable.MyCastTime >= 500 then
-            logger.debug(logger.flags.ability.validation, 'Not in control or moving (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
-            return IsReady.BUSY
+    if not skipCastingCheck then
+        if state.class ~= 'BRD' then
+            if mq.TLO.Me.Casting() or ((spellTable.MyCastTime or 0) > 0 and mq.TLO.Me.Moving()) then
+                logger.debug(logger.flags.ability.validation, 'Not in control or moving (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
+                return IsReady.BUSY
+            end
+        else
+            if mq.TLO.Me.Casting() and spellTable.MyCastTime >= 500 then
+                logger.debug(logger.flags.ability.validation, 'Not in control or moving (id=%s, name=%s, type=%s)', spell.ID(), spell.Name(), abilityType)
+                return IsReady.BUSY
+            end
         end
     end
     if abilityType ~= AbilityTypes.Item and (spell.Mana() > mq.TLO.Me.CurrentMana() or spell.EnduranceCost() > mq.TLO.Me.CurrentEndurance()) then

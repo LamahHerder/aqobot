@@ -116,6 +116,11 @@ Wizard.Abilities = {
         Name='Staff of Phenomenal Power',
         Options={first=true, epicburn=true}
     },
+    {
+        Type='AA',
+        Name='Volatile Mana Blaze',
+        Options={first=true}
+    },
 
     -- Buffs
     {

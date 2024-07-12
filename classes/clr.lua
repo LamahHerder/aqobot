@@ -208,7 +208,7 @@ Cleric.SpellLines = {
     {-- TODO: when to use? maybe lower levels? slower heal. Slot 11
         Group='renewal',
         Spells={'Heroic Renewal', 'Determined Renewal', 'Dire Renewal', 'Furial Renewal', 'Fervid Renewal', 'Desperate Renewal'},
-        Options={Gem=function(lvl) return lvl <= 70 and 5 or nil end, tank=true, panic=true}
+        Options={Gem=function(lvl) return lvl <= 70 and 5 or nil end, panic=true}
     },
     {-- Heal proc on target + reverse DS on targets target. Slot 11
         Group='retort',
@@ -252,7 +252,7 @@ Cleric.SpellLines = {
     {
         Group='groupaego',
         Spells={'Unified Hand of Infallibility', 'Unified Hand of Persistence', 'Unified Hand of Righteousness', 'Unified Hand of Assurance', 'Unified Hand of Surety', 'Hand of Reliance', --[[emu cutoff]] 'Hand of Conviction', 'Hand of Virtue', 'Blessing of Aegolism', 'Blessing of Temperance'},
-        Options={classes={CLR=true,WAR=true,SHD=true,PAL=true}, alias='AEGO', selfbuff=true}
+        Options={classes={CLR=true,WAR=true,SHD=true,PAL=true}, alias='AEGO', selfbuff=true, condition=function() return mq.TLO.Me.Level() < 70 end}
     },
     {
         Group='singleaego',
@@ -302,7 +302,7 @@ Cleric.SpellLines = {
 }
 
 Cleric.compositeNames = {['Ecliptic Blessing']=true, ['Composite Blessing']=true, ['Dissident Blessing']=true, ['Undying Life']=true}
-Cleric.allDPSSpellGroups = {'rebuke', 'contravention', 'stun', 'aestun'}
+Cleric.allDPSSpellGroups = {'rebuke', 'contravention', 'stun', 'aestun', 'nuke'}
 
 Cleric.Abilities = {
     {
@@ -320,6 +320,12 @@ Cleric.Abilities = {
         Type='AA',
         Name='Divine Peace',
         Options={fade=true, opt='USEFADE', postcast=function() mq.delay(1000) mq.cmd('/makemevis') end}
+    },
+
+    {
+        Type='AA',
+        Name='Turn Undead',
+        Options={dps=true, condition=function() return (mq.TLO.Target.PctHPs() or 100) < 95 and mq.TLO.Target.Body() == 'Undead' end},
     },
 
     -- Heal
@@ -423,7 +429,6 @@ Cleric.Abilities = {
     -- },
     -- table.insert(self.burnAbilities, self:addAA('Divine Avatar'))
     -- table.insert(self.burnAbilities, self:addAA('Battle Frenzy'))
-    -- table.insert(self.burnAbilities, self:addAA('Turn Undead'))
     -- table.insert(self.burnAbilities, self:addAA('Celestial Hammer'))
 }
 
@@ -433,6 +438,7 @@ function Cleric:initSpellRotations()
     table.insert(self.spellRotations.standard, self.spells.rebuke)
     table.insert(self.spellRotations.standard, self.spells.stun)
     table.insert(self.spellRotations.standard, self.spells.hammerpet)
+    table.insert(self.spellRotations.standard, self.spells.nuke)
 end
 
 function Cleric:initHeals()
@@ -441,14 +447,13 @@ function Cleric:initHeals()
         table.insert(self.healAbilities, self.spells.remedy2)
     else
         table.insert(self.healAbilities, self.spells.lightheal)
+        table.insert(self.healAbilities, self.spells.renewal)
     end
     table.insert(self.healAbilities, self.spells.splash)
     table.insert(self.healAbilities, self.spells.intervention1)
     table.insert(self.healAbilities, self.spells.intervention2)
     table.insert(self.healAbilities, self.spells.composite)
-    if mq.TLO.Me.Level() < 101 then
-        table.insert(self.healAbilities, self.spells.remedy1)
-    else
+    if mq.TLO.Me.Level() >= 101 then
         table.insert(self.healAbilities, self.spells.remedy3)
     end
     table.insert(self.healAbilities, self.spells.grouphealquick)

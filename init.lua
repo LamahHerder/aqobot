@@ -183,14 +183,14 @@ local function doLooting()
     end
 end
 
-local function handleStates()
+local function handleStates(class)
     -- Async state handling
     --if state.looting then loot.lootMobs() return true end
     --if state.selling then loot.sellStuff() return true end
     --if state.banking then loot.bankStuff() return true end
     if not state.handlePositioningState() then return true end
     if not state.handleMemSpell() then return true end
-    if not state.handleCastingState() then return true end
+    if not state.handleCastingState(class) then return true end
     if not state.handleQueuedAction() then return true end
 end
 
@@ -216,7 +216,7 @@ local function main()
         updateLoopState()
         buffSafetyCheck()
         if not state.paused and common.inControl() then
-            if not handleStates() then
+            if not handleStates(class) then
                 if state.reacquireTargetID then mq.cmdf('/mqtar id %s', state.reacquireTargetID) state.reacquireTargetID = nil end
                 aqo.camp.cleanTargets()
                 checkTarget()

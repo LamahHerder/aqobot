@@ -1,4 +1,5 @@
 local mq = require('mq')
+local actor = require('interface.actor')
 local config = require('interface.configuration')
 local ui = require('interface.ui')
 local assist = require('routines.assist')
@@ -23,6 +24,8 @@ function commands.init(_class)
     mq.bind('/aqo', commands.commandHandler)
     mq.bind(('/%s'):format(state.class), commands.commandHandler)
     mq.bind('/nowcast', commands.nowcastHandler)
+
+    actor.register('commands', commands.callback)
 end
 
 ---Display help information for the script.
@@ -317,6 +320,9 @@ function commands.commandHandler(...)
         class.massRez()
     elseif opt == 'REBUFF' then
         state.rebuff = true
+    elseif opt == 'TIMERS' then
+        local header = {script = 'aqo', server = mq.TLO.EverQuest.Server()}
+        actor.actor:send(header, {id='commands', })
     else
         commands.classSettingsHandler(opt, new_value)
     end
@@ -372,6 +378,13 @@ end
 
 function commands.nowcastHandler(...)
     class:nowCast({...})
+end
+
+function commands.callback(message)
+    local content = message.content()
+    if content.id == 'commands' then
+        printf('received timer response')
+    end
 end
 
 return commands

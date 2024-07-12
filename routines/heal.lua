@@ -50,7 +50,7 @@ end
 -- tank.ID, 'panic'
 -- member.ID, 'regular'
 -- 'group', 'regular'
-local function getHurt(options)
+function healing.getHurt(options)
     local numHurt = 0
     local mostHurtName = nil
     local mostHurtID = 0
@@ -185,7 +185,7 @@ local function getHurt(options)
 end
 
 local groupHOTTimer = timer:new(60000)
-local function getHeal(healAbilities, healType, whoToHeal, options, inGroup)
+function healing.getHeal(healAbilities, healType, whoToHeal, options, inGroup, skipCastingCheck)
     for _,heal in ipairs(healAbilities) do
         if heal[healType] and healEnabled(options, heal.opt) then
             if inGroup or (not inGroup and not heal.group and not heal.grouppanic) then
@@ -194,7 +194,7 @@ local function getHeal(healAbilities, healType, whoToHeal, options, inGroup)
                         if mq.TLO.Me.CombatState() == 'COMBAT' and groupHOTTimer:expired() and not mq.TLO.Me.Song(heal.Name)() and heal:isReady() == abilities.IsReady.SHOULD_CAST then return heal end
                     elseif heal.CastType == abilities.Types.Spell then
                         local spell = mq.TLO.Spell(heal.Name)
-                        if abilities.canUseSpell(spell, heal) == abilities.IsReady.CAN_CAST then
+                        if abilities.canUseSpell(spell, heal, false, skipCastingCheck) == abilities.IsReady.CAN_CAST then
                             return heal
                         end
                     elseif heal.CastType == abilities.Types.Item then
@@ -209,12 +209,12 @@ local function getHeal(healAbilities, healType, whoToHeal, options, inGroup)
             end
         end
     end
-    if healType == HEAL_TYPES.PANIC then return getHeal(healAbilities, HEAL_TYPES.REGULAR, whoToHeal, options, inGroup) end
-    if healType == HEAL_TYPES.GROUPPANIC then return getHeal(healAbilities, HEAL_TYPES.GROUP, whoToHeal, options, inGroup) end
+    if healType == HEAL_TYPES.PANIC then return healing.getHeal(healAbilities, HEAL_TYPES.REGULAR, whoToHeal, options, inGroup) end
+    if healType == HEAL_TYPES.GROUPPANIC then return healing.getHeal(healAbilities, HEAL_TYPES.GROUP, whoToHeal, options, inGroup) end
 end
 
 function healing.heal(healAbilities, options)
-    local whoToHeal, typeOfHeal, inGroup = getHurt(options)
+    local whoToHeal, typeOfHeal, inGroup = healing.getHurt(options)
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.TANK, true
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class "shadow knight"').ID(), HEAL_TYPES.TANK, true
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class warrior').ID(), HEAL_TYPES.PANIC, true
@@ -226,11 +226,11 @@ function healing.heal(healAbilities, options)
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.TANK, false
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.REGULAR, false
     -- local whoToHeal, typeOfHeal, inGroup = mq.TLO.Spawn('pc class magician').ID(), HEAL_TYPES.PANIC, false
-    local healToUse = getHeal(healAbilities, typeOfHeal, whoToHeal, options, inGroup)
+    local healToUse = healing.getHeal(healAbilities, typeOfHeal, whoToHeal, options, inGroup)
     if not healToUse and typeOfHeal == HEAL_TYPES.PANIC then
-        healToUse = getHeal(healAbilities, HEAL_TYPES.REGULAR, whoToHeal, options)
+        healToUse = healing.getHeal(healAbilities, HEAL_TYPES.REGULAR, whoToHeal, options)
     elseif not healToUse and typeOfHeal == HEAL_TYPES.GROUPPANIC then
-        healToUse = getHeal(healAbilities, HEAL_TYPES.GROUP, whoToHeal, options)
+        healToUse = healing.getHeal(healAbilities, HEAL_TYPES.GROUP, whoToHeal, options)
     end
     logger.debug(logger.flags.routines.heal, string.format('heal %s %s %s', whoToHeal, typeOfHeal, healToUse and healToUse.name or ''))
     if healToUse and (healToUse.CastType ~= abilities.Types.Spell or not mq.TLO.Me.SpellInCooldown()) then
@@ -238,7 +238,11 @@ function healing.heal(healAbilities, options)
             -- mq.cmdf('/mqt id %s', whoToHeal)
             mq.TLO.Spawn('id '..whoToHeal).DoTarget()
         end
-        if abilities.use(healToUse) then state.setHealState(whoToHeal, typeOfHeal, healToUse) return true end
+        if abilities.use(healToUse) then
+            state.setHealState(whoToHeal, typeOfHeal, healToUse)
+            if typeOfHeal == HEAL_TYPES.REGULAR then state.canInterrupt = true end
+            return true
+        end
         -- if typeOfHeal == HEAL_TYPES.HOT then
             -- local targetName = mq.TLO.Target.CleanName()
             -- if not targetName then return end
@@ -255,7 +259,7 @@ function healing.heal(healAbilities, options)
         if wantBuffs then
             for _,buffAlias in ipairs(wantBuffs) do
                 if buffAlias == 'HOT' then
-                    local healToUse = getHeal(healAbilities, HEAL_TYPES.HOT, toon, options)
+                    local healToUse = healing.getHeal(healAbilities, HEAL_TYPES.HOT, toon, options)
                     if healToUse then
                         mq.TLO.Spawn('pc ='..toon).DoTarget()
                         if abilities.use(healToUse) then return true end

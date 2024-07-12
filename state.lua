@@ -142,7 +142,7 @@ end
 state.casting = false
 state.castAttempts = 0
 
-function state.handleCastingState()
+function state.handleCastingState(class)
     if state.casting then
         -- non-plugin mode needs time before it actually detects casting
         mq.delay(300)
@@ -185,18 +185,23 @@ function state.handleCastingState()
                     return true
                 end
             elseif constants.healClasses[state.class] then
-                -- evaluate interrupting cast for a emergency heal
-                -- local injured = mq.TLO.Group.Injured(config.get('PANICHEALPCT'))() or 0
-                -- injured = 1
-                -- if injured > 0 and mq.TLO.Me.CastTimeLeft() > 1000 then
-                --     print('time to interrupt')
-                    -- if emergency heal available then
-                        -- mq.cmd('/stopcast')
-                        -- state.resetCastingState()
-                        -- state.resetHealState()
-                        -- return true
-                    -- end
-                -- end
+                if state.healTarget == mq.TLO.Target.ID() and (mq.TLO.Target.PctHPs() or 0) > 95 then
+                    mq.cmd('/stopcast')
+                    state.resetCastingState()
+                    state.resetHealState()
+                    return true
+                end
+                -- if not state.casting.cure and not state.casting.debuff then
+                if state.canIterrupt then
+                    -- evaluate interrupting cast for a emergency heal
+                    local panic = mq.TLO.Group.Injured(config.get('PANICHEALPCT'))() or 0
+                    local regular = mq.TLO.Group.Injured(config.get('HEALPCT'))() or 0
+                    if panic > 0 and (mq.TLO.Me.CastTimeLeft() > 750 or not state.healToUse) then
+                        if class:emergencyHeal() then return false end
+                    elseif regular > 0 and not state.healToUse then
+                        if class:emergencyHeal() then return false end
+                    end
+                end
             end
             return false
         end
@@ -219,6 +224,7 @@ function state.resetCastingState()
     state.fizzled = nil
     state.interrupted = nil
     state.actionTaken = false
+    state.canInterrupt = false
 end
 
 function state.setHealState(whoToHeal, healType, healToUse)

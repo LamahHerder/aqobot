@@ -50,6 +50,21 @@ Warrior.Abilities = {
         Options={tanking=true, aggro=true, condition=conditions.lowAggroInMelee}
     },
     {
+        Type='Item',
+        Name='Kreljnok\'s Sword of Ancient Power',
+        Options={dps=true, condition=conditions.withinMeleeDistance}
+    },
+    {
+        Type='Item',
+        Name='Kreljnok\'s Sword of Eternal Power',
+        Options={dps=true, condition=conditions.withinMeleeDistance}
+    },
+    {
+        Type='Item',
+        Name='Champion\'s Sword of Eternal Power',
+        Options={dps=true, condition=conditions.withinMeleeDistance}
+    },
+    {
         Type='Disc',
         Group='defense',
         Names={'Vigorous Defense', 'Primal Defense'},

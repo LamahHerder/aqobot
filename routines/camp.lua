@@ -69,19 +69,23 @@ function camp.mobRadar()
         x, y, z = camp.X, camp.Y, camp.Z
     end
     logger.debug(logger.flags.routines.camp, aggressive_count:format(config.get('CAMPRADIUS') or 0, x, y, z))
-    state.mobCount = mq.TLO.SpawnCount(aggressive_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
+    local mobCount = mq.TLO.SpawnCount(aggressive_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
     -- state.mobCountNoPets = mq.TLO.SpawnCount(aggressive_nopet_count:format(config.get('CAMPRADIUS') or 0, x, y, z))()
-    state.mobCountNoPets = state.mobCount
-    if state.mobCount > 0 then
-        for i=1,state.mobCount do
+    local mobCountNoPets = mobCount
+    if mobCount > 0 then
+        for i=1,mobCount do
             if i > 20 then break end
             logger.debug(logger.flags.routines.camp, aggressive_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
             local mob = mq.TLO.NearestSpawn(aggressive_spawn:format(i, config.get('CAMPRADIUS') or 0, x, y, z))
             local mob_id = mob.ID()
             if mob_id and mob_id > 0 then
-                if not mob() or mob.Type() == 'Corpse' or not mob.Aggressive() or mob.Type() == 'Pet' then
+                if not mob() or mob.Type() == 'Corpse' or not mob.Aggressive() then
                     state.targets[mob_id] = nil
-                    state.mobCountNoPets = state.mobCountNoPets - 1
+                    mobCount = mobCount - 1
+                    mobCountNoPets = mobCountNoPets - 1
+                elseif mob.Type() == 'Pet' then
+                    state.targets[mob_id] = nil
+                    mobCountNoPets = mobCountNoPets - 1
                 elseif not state.targets[mob_id] then
                     logger.debug(logger.flags.routines.camp, 'Adding mob_id %d', mob_id)
                     state.targets[mob_id] = {Name=mob.CleanName()}
@@ -91,6 +95,8 @@ function camp.mobRadar()
             end
         end
     end
+    state.mobCount = mobCount
+    state.mobCountNoPets = state.mobCountNoPets
 end
 
 ---Checks for any mobs in common.TARGETS which are no longer valid and removes them from the table.

@@ -122,7 +122,7 @@ Enchanter.SpellLines = {
     {-- single target dmg proc buff. Slot 9
         Group='procbuff',
         Spells={'Mana Reproduction', 'Mana Rebirth', 'Mana Replication', 'Mana Repetition', 'Mana Reciprocation', 'Mana Reverberation', 'Mana Repercussion', 'Mana Reiteration', --[[emu cutoff]] 'Mana Recursion', 'Mana Flare'},
-        Options={swap=false, Gem=9, singlebuff=true, selfbuff=true, classes={MAG=true,WIZ=true,NEC=true,ENC=true,RNG=true}}
+        Options={alias='MANAPROC', swap=false, Gem=9, singlebuff=true, selfbuff=true, classes={MAG=true,WIZ=true,NEC=true,ENC=true,RNG=true}}
     },
     {-- extra dot. Slot 10
         Group='dot2',

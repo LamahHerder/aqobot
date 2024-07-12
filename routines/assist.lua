@@ -164,7 +164,7 @@ function assist.getAssistSpawnIncludeManual()
     if assistTarget == -1 then
         -- Don't manual /assist if already on an assist target and switch with MA is false
         if state.assistMobID > 0 and mq.TLO.Target.ID() == state.assistMobID and not config.get('SWITCHWITHMA') then return state.assistMobID end
-        if mq.TLO.Spawn('npc radius '..config.get('CAMPRADIUS')).Aggressive() then
+        if mq.TLO.Me.CombatState() == 'COMBAT' or mq.TLO.SpawnCount('npc xtarhater radius '..config.get('CAMPRADIUS'))() > 0 or mq.TLO.Spawn('npc radius '..config.get('CAMPRADIUS')).Aggressive() then
             if manualAssistTimer:expired() or not mq.TLO.Target() then
                 local assistNames = helpers.split(config.get('ASSISTNAMES'), ',')
                 for _,assistName in ipairs(assistNames) do

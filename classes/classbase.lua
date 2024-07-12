@@ -617,6 +617,23 @@ function base:heal()
     end
 end
 
+function base:emergencyHeal()
+    local whoToHeal, typeOfHeal, inGroup = healing.getHurt(self.options)
+    -- if whoToHeal then printf('needs emergency healing %s %s %s', whoToHeal, typeOfHeal, inGroup) end
+    local healToUse = healing.getHeal(self.healAbilities, typeOfHeal, whoToHeal, self.options, inGroup, true)
+    -- if healToUse then printf('use emergency heal %s %s %s', healToUse.CastName, healToUse.MyCastTime, mq.TLO.Me.CastTimeLeft()) end
+    if healToUse and (not state.healToUse or healToUse.CastName ~= state.healToUse.CastName) and (healToUse.MyCastTime < mq.TLO.Me.CastTimeLeft() or not state.healToUse) then
+        -- printf('should emergency heal')
+        if whoToHeal and mq.TLO.Target.ID() ~= whoToHeal then
+            -- mq.cmdf('/mqt id %s', whoToHeal)
+            mq.TLO.Spawn('id '..whoToHeal).DoTarget()
+        end
+        mq.cmd('/stopcast')
+        mq.delay(50)
+        if abilities.use(healToUse) then state.setHealState(whoToHeal, typeOfHeal, healToUse) return true end
+    end
+end
+
 function base:cure()
     if mq.TLO.Me.SPA(15)() < 0 then
         if mq.TLO.Me.CountersCurse() > 0 then
@@ -812,6 +829,7 @@ function base:cast()
                 if spell:use(true) then
                     state.rotationIndex = index
                     state.actionTaken = true
+                    state.canInterrupt = true
                 else
                     state.rotationIndex = nil
                 end -- then cast the dot
@@ -1028,7 +1046,12 @@ function base:managepet()
     if petSpell.Mana > mq.TLO.Me.CurrentMana() then return end
     if petSpell.ReagentID and mq.TLO.FindItemCount(petSpell.ReagentID)() < petSpell.ReagentCount then return end
     abilities.swapAndCast(petSpell, state.swapGem, self)
-    state.queuedAction = function() mq.cmd('/pet ghold on') end
+    if state.queuedAction then
+        local tempQueuedAction = state.queuedAction
+        state.queuedAction = function() mq.cmd('/pet ghold on') return tempQueuedAction end
+    else
+        state.queuedAction = function() mq.cmd('/pet ghold on') end
+    end
     state.queuedActionTimer:reset()
     state.queuedActionTimer.expiration = 20000
 end

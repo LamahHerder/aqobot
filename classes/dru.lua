@@ -88,16 +88,16 @@ Druid.SpellLines = {
         Spells={'Horde of Hotaria', 'Horde of Duskwigs', 'Horde of Hyperboreads', 'Horde of Polybiads', 'Horde of Aculeids', 'Wasp Swarm', 'Swarming Death', 'Winged Death', 'Drones of Doom', 'Creeping Crud', 'Stinging Swarm'},
         Options={Gem=6, opt='USEDOTS'}
     },
-    {Group='dot3', Spells={'Sunscald', 'Sunpyre', 'Sunshock', 'Sunflame', 'Sunflash', 'Vengeance of the Sun'}, Options={opt='USEDOTS'}},
+    {Group='dot3', Spells={'Sunscald', 'Sunpyre', 'Sunshock', 'Sunflame', 'Sunflash', 'Vengeance of the Sun'}, Options={opt='USEDOTS', Gem=function(lvl) return lvl > 65 and 7 or nil end}},
     {Group='dot5', Spells={'Searing Sunray', 'Tenebrous Sunray', 'Erupting Sunray', 'Overwhelming Sunray', 'Consuming Sunray'}, Options={opt='USEDOTS'}}, -- inc spell dmg taken, dot, dec fire resist, dec AC
     --{Group='', Spells={'Mythical Moonbeam', 'Onyx Moonbeam', 'Opaline Moonbeam', 'Pearlescent Moonbeam', 'Argent Moonbeam'}}, -- sunray but cold resist
     {
         Group='nuke1',
         Spells={'Remote Sunscorch', 'Remote Sunbolt', 'Remote Sunshock', 'Remote Sunblaze', 'Remote Sunflash', --[[emu cutoff]] 'Combust', 'Ignite', 'Burst of Fire', 'Burst of Flame'},
-        Options={Gem=7, opt='USENUKES'}
+        Options={Gem=function(lvl) return lvl <= 65 and 2 end, opt='USENUKES'}
     }, -- nuke + heal tot
     {Group='nuke2', Spells={'Winter\'s Wildgale', 'Winter\'s Wildbrume', 'Winter\'s Wildshock', 'Winter\'s Wildblaze', 'Winter\'s Wildflame', 'Ancient: Glacier Frost', 'Fury of Air'}, Options={opt='USENUKES'}},
-    {Group='nuke3', Spells={'Summer Sunscald', 'Summer Sunpyre', 'Summer Sunshock', 'Summer Sunflame', 'Summer Sunfire', 'Dawnstrike', 'Sylvan Fire', 'Wildfire', 'Scoriae', 'Firestrike'}, Options={opt='USENUKES'}},
+    {Group='nuke3', Spells={'Summer Sunscald', 'Summer Sunpyre', 'Summer Sunshock', 'Summer Sunflame', 'Summer Sunfire', 'Dawnstrike', 'Sylvan Fire', 'Wildfire', 'Scoriae', 'Firestrike'}, Options={opt='USENUKES', Gem=function(lvl) return lvl > 65 and 2 end}},
     {Group='nuke4', Spells={'Tempest Roar', 'Bloody Roar', 'Typhonic Roar', 'Cyclonic Roar', 'Anabatic Roar'}, Options={opt='USENUKES'}},
 
     {Group='composite', Spells={'Ecliptic Winds', 'Composite Winds', 'Dichotomic Winds'}},
@@ -122,11 +122,11 @@ Druid.SpellLines = {
     {Group='petbuff', Spells={'Feral Spirit'}, Options={opt='USEPET', petbuff=true}},
 
     -- Buffs
-    {Group='skin', Spells={'Emberquartz Blessing', 'Luclinite Blessing', 'Opaline Blessing', 'Arcronite Blessing', 'Shieldstone Blessing', --[[emu cutoff]] 'Blessing of the Nine', 'Protection of Steel', 'Protection of Rock', 'Protection of Wood'}, Options={alias='SKIN', selfbuff=true}},
+    {Group='skin', Spells={'Emberquartz Blessing', 'Luclinite Blessing', 'Opaline Blessing', 'Arcronite Blessing', 'Shieldstone Blessing', --[[emu cutoff]] 'Blessing of Steeloak', 'Blessing of the Nine', 'Protection of Steel', 'Protection of Rock', 'Protection of Wood'}, Options={alias='SKIN', selfbuff=true, condition=function() return mq.TLO.Me.Level() < 70 end}},
     {Group='regen', Spells={'Talisman of the Unforgettable', 'Talisman of the Tenacious', 'Talisman of the Enduring', 'Talisman of the Unwavering', 'Talisman of the Faithful'}, Options={selfbuff=true}},
     {Group='mask', Spells={'Mask of the Ferntender', 'Mask of the Dusksage Tender', 'Mask of the Arbor Tender', 'Mask of the Wildtender', 'Mask of the Copsetender', --[[emu cutoff]] 'Mask of the Wild'}, Options={selfbuff=true}}, -- self mana regen, part of unity AA
     {Group='singleskin', Spells={'Emberquartz Skin', 'Luclinite Skin', 'Opaline Skin', 'Arcronite Skin', 'Shieldstone Skin', --[[emu cutoff]] 'Skin like Steel', 'Skin like Rock', 'Skin like Wood'}},
-    {Group='reptile', Spells={'Chitin of the Reptile', 'Bulwark of the Reptile', 'Defense of the Reptile', 'Guard of the Reptile', 'Pellicle of the Reptile', 'Skin of the Reptile'}, Options={Gem=12, opt='USEREPTILE', combatbuffothers=true, selfbuff=true, alias='REPTILE', singlebuff=true, classes={MNK=true,WAR=true,PAL=true,SHD=true}}}, -- debuff on hit, lowers atk++AC
+    {Group='reptile', Spells={'Chitin of the Reptile', 'Bulwark of the Reptile', 'Defense of the Reptile', 'Guard of the Reptile', 'Pellicle of the Reptile', 'Skin of the Reptile'}, Options={Gem=function(lvl) return lvl <= 70 and 11 end, opt='USEREPTILE', combatbuffothers=true, selfbuff=true, alias='REPTILE', singlebuff=true, classes={MNK=true,WAR=true,PAL=true,SHD=true}}}, -- debuff on hit, lowers atk++AC
     {Group='coat', Spells={'Bramblecoat', 'Barbcoat', 'Thistlecoat'}, Options={selfbuff=true}},
     {Group='ds', Spells={'Shield of Brambles', 'Shield of Barbs', 'Shield of Thistles'}, Options={opt='USEDS', singlebuff=true, classes={}}},
     {Group='sow', Spells={'Spirit of Wolf'}, Options={singlebuff=true, classes={}}},
@@ -135,7 +135,7 @@ Druid.SpellLines = {
 
     {Group='summonednuke', Spells={'Expel Summoned', 'Dismiss Summoned', 'Expulse Summoned', 'Ward Summoned'}, Options={opt='USENUKES', condition=function() return false end}}, -- summoned mobs only
     {Group='outdoornuke', Spells={'Dizzying Wind', 'Whirling Wind'}, Options={opt='USENUKES', condition=function() return false end}}, -- outdoor only
-    {Group='rainnuke', Spells={'Tempest Wind', 'Lightning Strike', 'Pogonip', 'Cascade of Hail', 'Invoke Lightning'}, Options={opt='USEAOE'}},
+    {Group='rainnuke', Spells={'Tempest Wind', 'Lightning Strike', 'Pogonip', 'Cascade of Hail', 'Invoke Lightning'}, Options={opt='USEAOE', Gem=function(lvl) return lvl <= 70 and 12 end}},
     {Group='dispel', Spells={'Cancel Magic'}, Options={opt='USEDISPEL', debuff=true, dispel=true}},
     {Group='pbaenuke', Spells={'Earthquake', 'Tremor'}, Options={opt='USEAOE'}}
 }
