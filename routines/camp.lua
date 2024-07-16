@@ -96,7 +96,7 @@ function camp.mobRadar()
         end
     end
     state.mobCount = mobCount
-    state.mobCountNoPets = state.mobCountNoPets
+    state.mobCountNoPets = mobCountNoPets
 end
 
 ---Checks for any mobs in common.TARGETS which are no longer valid and removes them from the table.

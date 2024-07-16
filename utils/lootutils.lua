@@ -121,7 +121,7 @@ local eqServer = string.gsub(mq.TLO.EverQuest.Server(),' ','_')
 local guiLoot = require('interface.loot_hist')
 local eqChar = mq.TLO.Me.Name()
 local actors = require('actors')
-local version = 1.7
+local version = 1.8
 -- Public default settings, also read in from Loot.ini [Settings] section
 local loot = {
     logger = logger,
@@ -163,6 +163,7 @@ local loot = {
     HideNames = false,          -- Hides names and uses class shortname in looted window
     LookupLinks = false,        -- Enables Looking up Links for items not on that character. *recommend only running on one charcter that is monitoring.
     RecordData = false,         -- Enables recording data to report later. 
+    AutoTag = false,            -- Automatically tag items to sell if they meet the MinSellPrice
     Terminate = true,
 }
 loot.logger.prefix = 'lootnscoot'
@@ -172,10 +173,12 @@ loot.state = {
 }
 guiLoot.imported = true
 loot.UseActors = true
+guiLoot.GetSettings(loot.HideNames, loot.LookupLinks, loot.RecordData, true, loot.UseActors, 'lootnscoot')
+guiLoot.init(actors, true, 'lootnscoot')
 
 -- Internal settings
 local lootData, cantLootList = {}, {}
-local doSell, doTribute, areFull = false, false, false
+local doSell, doBuy, doTribute, areFull = false, false, false, false
 local cantLootID = 0
 -- Constants
 local spawnSearch = '%s radius %d zradius 50'
@@ -185,8 +188,9 @@ local shouldLootActions = {Keep=true, Bank=true, Sell=true, Destroy=false, Ignor
 local validActions = {keep='Keep',bank='Bank',sell='Sell',ignore='Ignore',destroy='Destroy',quest='Quest', tribute='Tribute'}
 local saveOptionTypes = {string=1,number=1,boolean=1}
 local NEVER_SELL = {['Diamond Coin']=true, ['Celestial Crest']=true, ['Gold Coin']=true, ['Taelosian Symbols']=true, ['Planar Symbols']=true}
-local beeploots = {['Upper Runic Fragment']=true, ['Center Runic Fragment']=true, ['Lower Runic Fragment']=true, ['A Placid Void']=true, ['A Radiant Morsel']=true, ['Research Jar']=true, ['Jonas Dagmire\'s Forefinger Distal Phalanx']=true}
+local beeploots = {['Upper Runic Fragment']=true, ['Center Runic Fragment']=true, ['Lower Runic Fragment']=true, ['A Placid Void']=true, ['A Radiant Morsel']=true}
 local tmpCmd = loot.GroupChannel or 'dgae'
+local BuyItems = {}
 -- FORWARD DECLARATIONS
 
 local eventForage, eventSell, eventCantLoot, eventTribute, eventNoSlot
@@ -198,6 +202,12 @@ local function writeSettings()
         local valueType = type(value)
         if saveOptionTypes[valueType] then
             mq.cmdf('/ini "%s" "%s" "%s" "%s"', loot.SettingsFile, 'Settings', option, value)
+        end
+    end
+    for option,value in pairs(BuyItems) do
+        local valueType = type(value)
+        if saveOptionTypes[valueType] then
+            mq.cmdf('/ini "%s" "%s" "%s" "%s"', loot.SettingsFile, 'BuyItems', option, value)
         end
     end
 end
@@ -242,6 +252,13 @@ local function loadSettings()
     end
     shouldLootActions.Destroy = loot.DoDestroy
     shouldLootActions.Tribute = loot.TributeKeep
+    local iniBuyItems = mq.TLO.Ini.File(loot.SettingsFile).Section('BuyItems')
+    local buyKeyCount = iniBuyItems.Key.Count()
+    for i=1,buyKeyCount do
+        local key = iniBuyItems.Key.KeyAtIndex(i)()
+        local value = iniBuyItems.Key(key).Value()
+        BuyItems[key] = value
+    end
 end
 
 local function checkCursor()
@@ -316,7 +333,7 @@ local function AreBagsOpen()
     end
 end
 
----@return string,number,boolean
+---@return string,number,boolean|nil
 local function getRule(item)
     local itemName = item.Name()
     local lootDecision = 'Keep'
@@ -355,6 +372,11 @@ local function getRule(item)
         -- set Tribute flag if tribute value is greater than minTributeValue and the sell price is less than min sell price or has no value
         if tributeValue >= loot.MinTributeValue and (sellPrice < loot.MinSellPrice or sellPrice == 0) then lootDecision = 'Tribute' end
         addRule(itemName, firstLetter, lootDecision)
+        if loot.AutoTag and lootDecision == 'Keep' then -- Do we want to automatically tag items 'Sell' 
+            if not stackable and sellPrice > loot.MinSellPrice then lootDecision = 'Sell' end -- added stackable check otherwise it would stay set to Ignore when checking Stackable items in next steps.
+            if (stackable and loot.StackPlatValue > 0) and (sellPrice*stackSize >= loot.StackPlatValue) then lootDecision = 'Sell' end
+            addRule(itemName, firstLetter, lootDecision)
+        end
         newRule = true
     end
     -- check this before quest item checks. so we have the proper rule to compare.
@@ -414,10 +436,12 @@ local function commandHandler(...)
     if #args == 1 then
         if args[1] == 'sellstuff' and not loot.Terminate then
             doSell = true
+        elseif args[1] == 'restock' and not loot.Terminate then
+            doBuy = true
         elseif args[1] == 'reload' then
             lootData = {}
             loadSettings()
-            guiLoot.GetSettings(loot.HideNames, loot.LookupLinks, loot.RecordData)
+            guiLoot.GetSettings(loot.HideNames, loot.LookupLinks, loot.RecordData, true, loot.UseActors, 'lootnscoot')
             loot.Terminate = false
             logger.info("\ayReloaded Settings \axAnd \atLoot Files")
         elseif args[1] == 'bank' then
@@ -452,6 +476,9 @@ local function commandHandler(...)
         if args[1] == 'quest' and mq.TLO.Cursor() then
             addRule(mq.TLO.Cursor(),mq.TLO.Cursor():sub(1,1), 'Quest|'..args[2])
             logger.info(string.format("Setting \ay%s\ax to \ayQuest|%s\ax", mq.TLO.Cursor(), args[2]))
+        elseif args[1] == 'buy' and mq.TLO.Cursor() then
+            mq.cmdf('/ini "%s" "BuyItems" "%s" "%s"', loot.SettingsFile, mq.TLO.Cursor(), args[2])
+            logger.info(string.format("Setting \ay%s\ax to \ayBuy|%s\ax", mq.TLO.Cursor(), args[2]))
         elseif args[1] == 'globalitem' and validActions[args[2]] and mq.TLO.Cursor() then
             addRule(mq.TLO.Cursor(), 'GlobalItems', validActions[args[2]])
             logger.info(string.format("Setting \ay%s\ax to \ay%s\ax", mq.TLO.Cursor(), validActions[args[2]]))
@@ -466,6 +493,9 @@ local function commandHandler(...)
         elseif args[1] == 'globalitem' and validActions[args[2]] and args[3] ~= 'NULL' then
             addRule(args[3], 'GlobalItems', validActions[args[2]])
             logger.info(string.format("Setting \ay%s\ax to \ay%s\ax", args[3], validActions[args[2]]))
+        elseif args[1] == 'buy' then
+            mq.cmdf('/ini "%s" "BuyItems" "%s" "%s"', loot.SettingsFile, args[2], args[3])
+            logger.Info(string.format("Setting \ay%s\ax to \ayBuy|%s\ax", args[2], args[3]))
         elseif validActions[args[1]] and args[2] ~= 'NULL' then
             addRule(args[2], args[2]:sub(1,1), validActions[args[1]]..'|'..args[3])
             logger.info(string.format("Setting \ay%s\ax to \ay%s|%s\ax", args[2], validActions[args[1]], args[3]))
@@ -506,15 +536,18 @@ end
 ---@param qKeep number @The count to keep, for quest items.
 ---@param allItems table @Table of all items seen so far on the corpse, left or looted.
 local function lootItem(index, doWhat, button, qKeep, allItems)
+    local eval = doWhat
     logger.debug(logger.flags.common.loot, 'Enter lootItem')
     local corpseItem = mq.TLO.Corpse.Item(index)
     if not shouldLootActions[doWhat] then
-        table.insert(allItems, {Name=corpseItem.Name(), Action='Left', Link=corpseItem.ItemLink('CLICKABLE')()})
+        table.insert(allItems, {Name=corpseItem.Name(), Action='Left', Link=corpseItem.ItemLink('CLICKABLE')(), Eval=doWhat})
         return
     end
     local corpseItemID =corpseItem.ID()
     local itemName = corpseItem.Name()
     local itemLink = corpseItem.ItemLink('CLICKABLE')()
+    local globalItem = (loot.GlobalLootOn and lookupIniLootRule('GlobalItems', itemName)~= "NULL") and true or false
+
     mq.cmdf('/nomodkey /shift /itemnotify loot%s %s', index, button)
     -- Looting of no drop items is currently disabled with no flag to enable anyways
     -- added check to make sure the cursor isn't empty so we can exit the pause early.-- or not mq.TLO.Corpse.Item(index).NoDrop()
@@ -526,18 +559,24 @@ local function lootItem(index, doWhat, button, qKeep, allItems)
     -- The loot window closes if attempting to loot a lore item you already have, but lore should have already been checked for
     if not mq.TLO.Window('LootWnd').Open() then return end
     if doWhat == 'Destroy' and mq.TLO.Cursor.ID() == corpseItemID then
+        eval = globalItem and 'Global Destroy' or 'Destroy'
         mq.cmd('/destroy')
-        table.insert(allItems, {Name=itemName, Action='Destroyed', Link=itemLink})
+        table.insert(allItems, {Name=itemName, Action='Destroyed', Link=itemLink, Eval=eval})
     end
     checkCursor()
     if qKeep > 0 and doWhat == 'Keep' then
+        eval = globalItem and 'Global Quest' or 'Quest'
         local countHave = mq.TLO.FindItemCount(string.format("%s",itemName))() + mq.TLO.FindItemBankCount(string.format("%s",itemName))()
         report("\awQuest Item:\ag %s \awCount:\ao %s \awof\ag %s", itemLink, tostring(countHave), qKeep)
     else
+        eval = globalItem and 'Global '..doWhat or doWhat
         report('%sing \ay%s\ax', doWhat, itemLink)
     end
     if doWhat ~= 'Destroy' then
-        table.insert(allItems, {Name=itemName, Action='Looted', Link=itemLink})
+        if not string.find(eval, 'Quest') then
+            eval = globalItem and 'Global '..doWhat or doWhat
+        end
+        table.insert(allItems, {Name=itemName, Action='Looted', Link=itemLink, Eval=eval})
     end
     CheckBags()
     if areFull then report('My bags are full, I can\'t loot anymore! Turning OFF Looting until we sell.') end
@@ -562,13 +601,13 @@ local function lootCorpse(corpseID)
     end
     -- Check bags after opening corpse so that the corpse can be hidden after looting cash.
     -- Otherwise, can loop forever running to the same corpses when bags are full
-    CheckBags()
-    if areFull then
-        mq.cmd('/nomodkey /notify LootWnd LW_DoneButton leftmouseup')
-        loot.state.lootingCorpse = nil
-        mq.delay(3000, function() return not mq.TLO.Window('LootWnd').Open() end)
-        return
-    end
+    -- CheckBags()
+    -- if areFull then
+    --     mq.cmd('/nomodkey /notify LootWnd LW_DoneButton leftmouseup')
+    --     loot.state.lootingCorpse = nil
+    --     mq.delay(3000, function() return not mq.TLO.Window('LootWnd').Open() end)
+    --     return
+    -- end
     mq.delay(1000, function() return (mq.TLO.Corpse.Items() or 0) > 0 end)
     local items = mq.TLO.Corpse.Items() or 0
     logger.debug(logger.flags.common.loot, ('Loot window open. Items: %s'):format(items))
@@ -606,7 +645,7 @@ local function lootCorpse(corpseID)
                         lootItem(i, itemRule, 'leftmouseup', qKeep, allItems)
                     end
                 elseif corpseItem.NoDrop() then
-                    if loot.LootNoDrop then
+                    if loot.LootNoDrop and (freeSpace > loot.SaveBagSlots or (stackable and freeStack > 0)) then
                         if not newRule or (newRule and loot.LootNoDropNew) then
                             lootItem(i, itemRule, 'leftmouseup', qKeep, allItems)
                         end
@@ -659,6 +698,8 @@ local function corpseLocked(corpseID)
 end
 
 function loot.lootMobs(limit)
+    -- CheckBags()
+    -- if areFull then return end
     logger.debug(logger.flags.common.loot, 'Enter lootMobs')
     local deadCount = mq.TLO.SpawnCount(spawnSearch:format('npccorpse', loot.CorpseRadius))()
     logger.debug(logger.flags.common.loot, string.format('There are %s corpses in range.', deadCount))
@@ -702,7 +743,7 @@ function loot.lootMyCorpse()
         if items > 0 then
             -- mq.cmd('/nomodkey /notify LootWnd LW_LootAllButton leftmouseup')
             mq.cmd('/lootall')
-            mq.delay(30000, function() return not mq.TLO.Corpse() end)
+            mq.delay(30000, function() return mq.TLO.Corpse() == 'FALSE' or not mq.TLO.Corpse() end)
 
             -- for i=1,items do
             --     local corpseItem = mq.TLO.Corpse.Item(i)
@@ -784,6 +825,28 @@ local function sellToVendor(itemToSell, bag, slot)
         end
         -- TODO: handle vendor not wanting item / item can't be sold
         mq.delay(1000, function() return mq.TLO.Window('MerchantWnd/MW_SelectedItemLabel').Text() == '' end)
+    end
+end
+
+-- BUYING
+
+local function RestockItems()
+    local rowNum = 0
+    for itemName, qty in pairs(BuyItems) do
+        rowNum = mq.TLO.Window("MerchantWnd/MW_ItemList").List(itemName,2)()  or 0
+        mq.delay(20)
+        local tmpQty = qty - mq.TLO.FindItemCount(itemName)()
+        if rowNum ~= 0 and tmpQty > 0 then
+            mq.TLO.Window("MerchantWnd/MW_ItemList").Select(rowNum)()
+            mq.delay(100)
+            mq.TLO.Window("MerchantWnd/MW_Buy_Button").LeftMouseUp()
+            mq.delay(500, function () return mq.TLO.Window("QuantityWnd").Open() end)
+            mq.TLO.Window("QuantityWnd/QTYW_SliderInput").SetText(tostring(tmpQty))()
+            mq.delay(100, function () return mq.TLO.Window("QuantityWnd/QTYW_SliderInput").Text() == tostring(tmpQty) end)
+            mq.TLO.Window("QuantityWnd/QTYW_Accept_Button").LeftMouseUp()
+            mq.delay(100)
+        end
+        mq.delay(500, function () return mq.TLO.FindItemCount(itemName)() == qty end)
     end
 end
 
@@ -995,6 +1058,14 @@ function loot.processItems(action)
         end
     end
 
+    if action == 'Buy' then
+        if not mq.TLO.Window('MerchantWnd').Open() then
+            if not goToVendor() then return end
+            if not openVendor() then return end
+        end
+        RestockItems()
+    end
+
     if flag then
         flag, loot.AlwaysEval = false, true
     end
@@ -1077,11 +1148,14 @@ local function guiExport()
                 if _ then writeSettings() end
                 _,loot.AddNewTributes = ImGui.MenuItem("AddNewTributes", nil, loot.AddNewTributes)
                 if _ then writeSettings() end
+                _,loot.AutoTag = ImGui.MenuItem("AutoTagSell", nil, loot.AutoTag)
+                if _ then writeSettings() end
                 ImGui.Separator()
                 _,loot.DoDestroy = ImGui.MenuItem("DoDestroy", nil, loot.DoDestroy)
                 if _ then writeSettings() end
                 _,loot.AlwaysDestroy = ImGui.MenuItem("AlwaysDestroy", nil, loot.AlwaysDestroy)
                 if _ then writeSettings() end
+
                 ImGui.EndMenu()
             end
             if ImGui.BeginMenu('Group Commands') then
@@ -1090,15 +1164,23 @@ local function guiExport()
                 if ImGui.MenuItem("Sell Stuff##group") then
                     mq.cmd(string.format('/%s /lootutils sellstuff', tmpCmd))
                 end
+
                 if ImGui.MenuItem("Tribute Stuff##group") then
                     mq.cmd(string.format('/%s /lootutils tributestuff', tmpCmd))
                 end
+
                 if ImGui.MenuItem("Bank##group") then
                     mq.cmd(string.format('/%s /lootutils bank', tmpCmd))
                 end
+
                 if ImGui.MenuItem("Cleanup##group") then
                     mq.cmd(string.format('/%s /lootutils cleanup', tmpCmd))
                 end
+
+                if ImGui.MenuItem("Reload##group") then
+                    mq.cmd(string.format('/%s /lootutils reload', tmpCmd))
+                end
+
                 ImGui.EndMenu()
             end
             if ImGui.MenuItem('Sell Stuff') then
@@ -1142,7 +1224,11 @@ local function processArgs(args)
         elseif args[1] == 'once' then
             loot.lootMobs()
         elseif args[1] == 'standalone' then
-            if guiLoot ~= nil then guiLoot.GetSettings(loot.HideNames,loot.LookupLinks,loot.RecordData, loot.UseActors) end
+
+            if guiLoot ~= nil then
+                guiLoot.GetSettings(loot.HideNames, loot.LookupLinks, loot.RecordData, true, loot.UseActors, 'lootnscoot')
+                guiLoot.init(true, true, 'lootnscoot')
+            end
             loot.Terminate = false
         end
     end
@@ -1167,8 +1253,10 @@ init({...})
 
 while not loot.Terminate do
     if mq.TLO.Window('CharacterListWnd').Open() then loot.Terminate = true end -- exit sctipt if at char select.
-    if loot.DoLoot and not areFull then loot.lootMobs() end
+    -- if loot.DoLoot and not areFull then loot.lootMobs() end
+    if loot.DoLoot then loot.lootMobs() end
     if doSell then loot.processItems('Sell') doSell = false end
+    if doBuy then loot.processItems('Buy') doBuy = false end
     if doTribute then loot.processItems('Tribute') doTribute = false end
     mq.doevents()
     mq.delay(1000)

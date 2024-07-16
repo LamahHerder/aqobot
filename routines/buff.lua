@@ -109,13 +109,16 @@ local function buffSelf(base)
                                 if state.giveUpTimer:expired() then state.giveUpTimer = nil return nil end
                                 return state.queuedAction
                             else
-                                mq.delay(100, function() return mq.TLO.Me.Buff(buff.RemoveBuff)() end)
+                                mq.delay(1000, function() return mq.TLO.Me.Buff(buff.RemoveBuff)() end)
                                 if buff.RemoveBuff and mq.TLO.Me.Buff(buff.RemoveBuff)() then
                                     logger.info('Removing buff \ag%s\ax', buff.RemoveBuff)
+                                    mq.delay(50)
                                     mq.cmdf('/removebuff "%s"', buff.RemoveBuff)
                                 end
-                                if buff.RemoveFamiliar and mq.TLO.Pet.ID() > 0 and (mq.TLO.Pet.Level() == 1 or mq.TLO.Pet.CleanName():find('familiar')) then
+                                if buff.RemoveFamiliar then mq.delay(1000, function() return mq.TLO.Pet.ID() > 0 end) end
+                                if buff.RemoveFamiliar and mq.TLO.Pet.ID() > 0 and (mq.TLO.Pet.Level() == 1 or mq.TLO.Pet.CleanName():lower():find('familiar')) then
                                     logger.info('Removing familiar')
+                                    mq.delay(50)
                                     mq.cmdf('/squelch /pet get lost')
                                 end
                             end

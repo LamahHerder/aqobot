@@ -420,13 +420,18 @@ Cleric.Abilities = {
         Type='AA',
         Name='Divine Guardian',
         Options={alias='DG', classes={WAR=true,SHD=true,PAL=true}, nodmz=true, combatbuffothers=true}
-    }
+    },
     -- dps burns
-    -- {
-    --     Type='AA',
-    --     Name='Improved Twincast',
-    --     Options={}
-    -- },
+    {
+        Type='AA',
+        Name='Improved Twincast',
+        Options={first=true}
+    },
+    {
+        Type='AA',
+        Name='Battle Frenzy',
+        Options={first=true}
+    },
     -- table.insert(self.burnAbilities, self:addAA('Divine Avatar'))
     -- table.insert(self.burnAbilities, self:addAA('Battle Frenzy'))
     -- table.insert(self.burnAbilities, self:addAA('Celestial Hammer'))

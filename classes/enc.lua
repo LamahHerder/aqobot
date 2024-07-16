@@ -211,10 +211,11 @@ Enchanter.SpellLines = {
     {Group='shield', Spells={'Shield of Memories', 'Shield of Shadow', 'Shield of Restless Ice', 'Greater Shielding', 'Major Shielding', 'Shielding', 'Lesser Shielding', 'Minor Shielding'}},
     {Group='ward', Spells={'Ward of the Beguiler', 'Ward of the Transfixer'}},
 
-    {Group='spasm', Spells={'Synaptic Seizure', 'Synapsis Spasm', 'Insipid Weakness', 'Listless Power', 'Feckless Might', 'Disempower', 'Ebbing Strength', 'Enfeeblement', 'Weaken'}, Options={debuff=true, opt='USECRIPPLE', emu=true, Gem=function(lvl) return (lvl <= 60 and 6) or (lvl == 70 and 2) or nil end, condition=function() return mq.TLO.Target.Named() end}},
+    {Group='spasm', Spells={'Synaptic Seizure', 'Synapsis Spasm', 'Insipid Weakness', 'Listless Power', 'Feckless Might', 'Disempower', 'Ebbing Strength', 'Enfeeblement', 'Weaken'}, Options={debuff=true, opt='USECRIPPLE', emu=true, Gem=function(lvl) return (lvl <= 60 and 6) or (lvl == 70 and 2) or nil end}},--, condition=function() return mq.TLO.Target.Named() end}},
     {Group='dispel', Spells={'Abashi\'s Disempowerment', 'Recant Magic', 'Nullify Magic', 'Strip Enchantment', 'Cancel Magic', 'Taper Enchantment'}, Options={opt='USEDISPEL'}},
     {Group='slow', Spells={'Tepid Deeds', 'Languid Pace'}, Options={opt='USESLOW', debuff=true, slow=true, Gem=function(lvl) return lvl <= 60 and 2 or nil end}},
-    {Group='charisma', Spells={'Overwhelming Splendor'}, Options={alias='CHA'}}
+    {Group='charisma', Spells={'Overwhelming Splendor'}, Options={alias='CHA'}},
+    {Group='boon', Spells={'Boon of the Legion'}}, Options={Gem=function(lvl) end, alias='BOON'}
 }
 
 Enchanter.compositeNames = {['Ecliptic Reinforcement']=true,['Composite Reinforcement']=true,['Dissident Reinforcement']=true,['Dichotomic Reinforcement']=true}

@@ -235,7 +235,7 @@ Shaman.SpellLines = {
     {-- greater poison dot. Not used directly. only by combo spell. (chaotic)
         Group='blooddot',
         Spells={'Caustic Blood', 'Desperate Vampyre Blood', 'Restless Blood', 'Scorpikis Blood', 'Reef Crawler Blood', 'Blood of Yoppa'},
-        Options={opt='USEDOTS', Gem=function(lvl) return (not Shaman:get('USECRIPPLE') and lvl == 70 and 6) or (not Shaman.spells.chaotic and (Shaman:get('SPELLSET') == 'standard' or not Shaman:isEnabled('USEALLIANCE')) and 13) or (not Shaman.spells.chaotic and Shaman:get('SPELLSET') == 'dps' and not Shaman:isEnabled('MEMCUREALL') and 6) or nil end}
+        Options={opt='USEDOTS', Gem=function(lvl) return (mq.TLO.FindItem('Forsaken Jaundiced Bone Bracer')() and 2) or (not Shaman:get('USECRIPPLE') and lvl == 70 and 6) or (not Shaman.spells.chaotic and (Shaman:get('SPELLSET') == 'standard' or not Shaman:isEnabled('USEALLIANCE')) and 13) or (not Shaman.spells.chaotic and Shaman:get('SPELLSET') == 'dps' and not Shaman:isEnabled('MEMCUREALL') and 6) or nil end}
     },
     {-- keep up on tank, proc ae heal from target. Slot 13
         Group='alliance',
@@ -471,6 +471,11 @@ Shaman.Abilities = {
         Type='AA',
         Name='Spirit Call',
         Options={first=true, delay=1500}
+    },
+    {
+        Type='AA',
+        Name='Improved Twincast',
+        Options={first=true}
     },
     -- table.insert(self.burnAbilities, common.getItem('Blessed Spiritstaff of the Heyokah'), {first=true}) -- 2.0 click
     -- table.insert(self.burnAbilities, self:addAA('Spire of Ancestors'), {first=true}) -- inc total healing, dot crit

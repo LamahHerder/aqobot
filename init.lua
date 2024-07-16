@@ -249,6 +249,7 @@ local function main()
                 local manastoneTimer = timer:new(500)
                 while mq.TLO.Me.PctHPs() > 50 and mq.TLO.Me.PctMana() < 90 do
                     mq.cmd('/useitem Manastone')
+                    mq.delay(1)
                     if manastoneTimer:expired() then break end
                 end
                 state.manastoneCount = state.manastoneCount + 1

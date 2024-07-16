@@ -822,6 +822,7 @@ function base:cast()
                         if clicky:use() then return end
                     end
                 end
+                self:doMashClickies()
             end
             local spell, index = self:findNextSpell()
             if spell then -- if a dot was found
@@ -1170,7 +1171,7 @@ function base:handleRampage()
             if self:isAbilityEnabled(ability.opt) then
                 if ability.precast then ability.precast() end
                 if ability:use() then
-                    mq.cmdf('/rs fading to lose rampage')
+                    mq.cmdf('/g fading to lose rampage')
                     if ability.postcast then ability.postcast() end
                 end
             end
@@ -1279,7 +1280,7 @@ function base:mainLoop()
     if not state.pullStatus or state.pullStatus == constants.pullStates.PULLED then
         if state.pullStatus == constants.pullStates.PULLED then pull.clearPullVars('classloop') end
         if state.rebuff then buffing.buff(self) end
-        if state.rampTank then
+        if state.rampTank and (state.class == 'BRD' or not mq.TLO.Me.Casting()) then
             if state.mobCount > 0 and not state.rampAnnounced then
                 if base.handleRampage then base:handleRampage() end
                 state.rampAnnounced = true

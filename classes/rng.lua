@@ -453,8 +453,10 @@ local function attackRanged()
         if mq.TLO.Me.AutoFire() then mq.cmd('/autofire off') end
         return
     end
-    local dist3d = mq.TLO.Target.Distance3D()
-    if mq.TLO.Navigation.Active() then mq.cmd('/squelch /nav stop') end
+    local dist3d = mq.TLO.Target.Distance3D() or 100
+    if mq.TLO.Target.LineOfSight() and dist3d < 50 then
+        if mq.TLO.Navigation.Active() then mq.cmd('/squelch /nav stop') end
+    end
     if not state.emu then
         if not mq.TLO.Target.LineOfSight() or (dist3d and dist3d < 35) then
             if not getRangedCombatPosition(40) then
@@ -462,9 +464,13 @@ local function attackRanged()
             end
         end
     else
-        local maxRangeTo = mq.TLO.Target.MaxRangeTo() or 0
-        --mq.cmdf('/squelch /stick hold moveback behind %s uw', math.min(maxRangeTo*.75, 25))
-        mq.cmdf('/squelch /stick snaproll moveback behind %s uw', math.min(maxRangeTo*.75, 25))
+        if mq.TLO.Target.LineOfSight() then
+            local maxRangeTo = mq.TLO.Target.MaxRangeTo() or 0
+            --mq.cmdf('/squelch /stick hold moveback behind %s uw', math.min(maxRangeTo*.75, 25))
+            mq.cmdf('/squelch /stick snaproll moveback behind %s uw', math.min(maxRangeTo*.75, 25))
+        else
+            assist.checkLOS()
+        end
     end
     --movement.stop()
     if mq.TLO.Target() then

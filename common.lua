@@ -359,6 +359,7 @@ function common.checkMana()
             local manastoneTimer = timer:new((config.get('MANASTONETIME') or 0)*1000)
             while mq.TLO.Me.PctHPs() > config.get('MANASTONESTOPHP') and not manastoneTimer:expired() do
                 mq.cmd('/useitem manastone')
+                mq.delay(1)
             end
         end
     end

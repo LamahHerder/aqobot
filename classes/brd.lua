@@ -609,6 +609,7 @@ end
 
 function Bard:cast()
     if self:isEnabled('USETWIST') or mq.TLO.Me.Invis() or state.paused then return false end
+    for i=1,mq.TLO.Group.Members() do if (mq.TLO.Group.Member(i).Distance3D() or 0) > config.get('CAMPRADIUS') then return end end
     if not mq.TLO.Me.Invis() and self:doneSinging() then
         --if mq.TLO.Target.Type() == 'NPC' and mq.TLO.Me.CombatState() == 'COMBAT' then
         if mq.TLO.Target.Type() == 'NPC' and mq.TLO.Me.Combat() then
@@ -635,6 +636,7 @@ function Bard:cast()
                     end
                 end
             end
+            self:doMashClickies()
         end
         local spell = self:findNextSong() -- find the first available dot to cast that is missing from the target
         if spell then -- if a song was found

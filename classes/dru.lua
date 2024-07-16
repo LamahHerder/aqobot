@@ -30,7 +30,7 @@ local Druid = class:new()
     skin of the reptile
 ]]
 function Druid:init()
-    self.classOrder = {'heal', 'assist', 'aggro', 'debuff', 'burn', 'cast', 'mash', 'recover', 'rez', 'buff', 'rest', 'managepet'}
+    self.classOrder = {'heal', 'cure', 'assist', 'aggro', 'debuff', 'burn', 'cast', 'mash', 'recover', 'rez', 'buff', 'rest', 'managepet'}
     self.spellRotations = {standard={},custom={}}
     self:initBase('DRU')
 
@@ -52,6 +52,7 @@ function Druid:initClassOptions()
     self:addOption('USEDEBUFF', 'Use Ro Debuff', false, nil, 'Use Blessing of Ro AA', 'checkbox', nil, 'UseDebuff', 'bool')
     self:addOption('USEREPTILE', 'Use Reptile Buff', false, nil, 'Use Skin of the Reptile proc buff', 'checkbox', nil, 'UseReptile', 'bool')
     self:addOption('USEDS', 'Use DS', false, nil, 'Use Damage Shield', 'checkbox', nil, 'UseDS', 'bool')
+    self:addOption('USECURES', 'Use Cures', true, nil, 'Toggle use of cure spells', 'checkbox', nil, 'UseCures', 'bool')
 end
 
 -- Blessing of Oak

@@ -44,12 +44,14 @@ mq.event('enrageOn', '#1# has become ENRAGED.', eventEnraged)
 --|-  Turns attack back on, after enrage is over. -|
 --|------------------------------------------------|
 local function eventEnragedOff(line, name)
-    if mq.TLO.Target.ID() == mq.TLO.Spawn(name).ID() then
-        -- target is no longer enraged
-        mq.cmd('/attack on')
-    end
-    if mq.TLO.Pet.ID() > 0 then
-        mq.cmd('/pet attack')
+    if not state.paused and mq.TLO.Me.CombatState() == 'COMBAT' then
+        if mq.TLO.Target.ID() == mq.TLO.Spawn(name).ID() then
+            -- target is no longer enraged
+            mq.cmd('/attack on')
+        end
+        if mq.TLO.Pet.ID() > 0 then
+            mq.cmd('/pet attack')
+        end
     end
     state.dontAttack = nil
     state.petDontAttack = nil
