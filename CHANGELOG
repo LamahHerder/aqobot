@@ -1,3 +1,17 @@
+# 2024/07/16
+- lootnscoot / looted updated to latest
+- bard songs stop playing if group member out of camp radius
+- mash clickies called from cast routines for casters with no mash in routines
+- check casting before attempting rampage abilities
+- add clr dps burns
+- add cure option on druid
+- attempt some fixes on ranger stick/nav spam when no los
+- use blood of yoppa on shaman, add imp twincast to burns
+- use ancient spear of gelaqua on wizard
+- add delay 1 in manastone loops for manastone revamp
+- check paused in enrage events
+- fix count of mobs in camp
+
 # 2024/07/01
 - DOTNAMEDONLY check for all classes
 - Add /aqo burnnow epicburn
