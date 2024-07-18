@@ -12,7 +12,7 @@ constants.commandHelp = {
     {command='resetcamp', tip='Reset the centerpoint of the camp to your current X,Y,Z coordinates'},
     {command='burnnow', tip='Activate burn abilities'},
     {command='preburn', tip='Activate pre-burn abilities, like to use glyph in guild hall'},
-    {command='addclicky <mash|burn|buff|heal>', tip='Adds the currently held item to the clicky group specified'},
+    {command='addclicky <mash|cast|burn|buff|petbuff|heal|defensive|mana|summon|debuff|pull> [key/value]', tip='Adds the currently held item to the clicky group specified'},
     {command='removeclicky', tip='Removes the currently held item from clickies'},
     {command='enableclicky', tip='Enables the currently held item'},
     {command='disableclicky', tip='Disables the currently held item'},

@@ -417,7 +417,10 @@ end
 
 function common.processList(aList, class, returnOnFirstUse)
     for _,entry in ipairs(aList) do
-        if abilities.use(entry, class) and returnOnFirstUse then return true end
+        if abilities.use(entry, class) then
+            mq.delay(entry.delay or 200)
+            if returnOnFirstUse then return true end
+        end
     end
 end
 

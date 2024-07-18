@@ -149,12 +149,13 @@ function state.handleCastingState(class)
         mq.doevents()
         if not mq.TLO.Me.Casting() then
             mq.cmd('/stick unpause')
+            if state.casting.clickyType and mq.TLO.Me.ItemReady(state.casting.name)() then state.casting.timer:reset(0) end
             if state.fizzled or state.interrupted then
                 logger.info('Casting \ag%s\ax failed (Attempt %s)', state.casting.Name, state.castAttempts + 1)
                 local casting = state.casting
+                casting.timer:reset(0)
                 if state.castAttempts < 2 then
                     state.castAttempts = state.castAttempts + 1
-                    casting.timer:reset(0)
                     local tmpQueuedAction = state.queuedAction
                     state.queuedAction = function()
                         mq.delay(1000, function() return not mq.TLO.Me.SpellInCooldown() end)

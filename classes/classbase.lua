@@ -1,27 +1,28 @@
 local mq = require 'mq'
 
-local config    = require('interface.configuration')
+local config     = require('interface.configuration')
 
-local assist    = require('routines.assist')
-local buffing   = require('routines.buff')
-local camp      = require('routines.camp')
-local curing    = require('routines.cure')
-local debuff    = require('routines.debuff')
-local healing   = require('routines.heal')
-local mez       = require('routines.mez')
-local pull      = require('routines.pull')
-local tank      = require('routines.tank')
+local assist     = require('routines.assist')
+local buffing    = require('routines.buff')
+local camp       = require('routines.camp')
+local curing     = require('routines.cure')
+local debuff     = require('routines.debuff')
+local healing    = require('routines.heal')
+local mez        = require('routines.mez')
+local pull       = require('routines.pull')
+local tank       = require('routines.tank')
 
-local helpers   = require('utils.helpers')
-local logger    = require('utils.logger')
-local movement  = require('utils.movement')
-local timer     = require('libaqo.timer')
+local conditions = require('routines.conditions')
+local helpers    = require('utils.helpers')
+local logger     = require('utils.logger')
+local movement   = require('utils.movement')
+local timer      = require('libaqo.timer')
 
-local abilities = require('ability')
-local common    = require('common')
-local constants = require('constants')
-local mode      = require('mode')
-local state     = require('state')
+local abilities  = require('ability')
+local common     = require('common')
+local constants  = require('constants')
+local mode       = require('mode')
+local state      = require('state')
 
 ---Each EQ class' implementation extends from and overrides this base class.
 ---Base provides the main class routine loop and common implementations to iterate over ability lists
@@ -425,12 +426,14 @@ function base:getTableForClicky(clickyType)
 end
 
 function base:addClicky(clicky)
-    self.clickies[clicky.name] = {clickyType=clicky.clickyType, summonMinimum=clicky.summonMinimum, opt=clicky.opt, enabled=clicky.enabled}
+    -- self.clickies[clicky.name] = {clickyType=clicky.clickyType, summonMinimum=clicky.summonMinimum, opt=clicky.opt, enabled=clicky.enabled, alias=clicky.alias, condition=clicky.condition, usebelowpct=clicky.usebelowpct}
+    self.clickies[clicky.name] = clicky
     local item = mq.TLO.FindItem('='..clicky.name)
     if item.Clicky() then
         local t = self:getTableForClicky(clicky.clickyType)
         if t then
-            table.insert(t, common.getItem(clicky.name, {summonMinimum=clicky.summonMinimum, opt=clicky.opt, enabled=clicky.enabled}))
+            -- table.insert(t, common.getItem(clicky.name, {summonMinimum=clicky.summonMinimum, opt=clicky.opt, enabled=clicky.enabled, condition=conditions[clicky.condition], alias=clicky.alias, usebelowpct=clicky.usebelowpct}))
+            table.insert(t, common.getItem(clicky.name, clicky))
         end
         logger.info('Added \ay%s\ax clicky: \ag%s\ax', clicky.clickyType, clicky.name)
     end
@@ -1042,6 +1045,11 @@ end
 function base:managepet()
     local petSpell = self.getPetSpell and self:getPetSpell() or self.spells.pet
     if not self:isEnabled('SUMMONPET') or not petSpell then return end
+    if mq.TLO.Pet.ID() > 0 and (mq.TLO.Pet.Level() == 1 or mq.TLO.Pet.CleanName():lower():find('familiar')) then
+        logger.info('Removing familiar')
+        mq.cmdf('/squelch /pet get lost')
+        mq.delay(50)
+    end
     if not common.clearToBuff() or mq.TLO.Pet.ID() > 0 or mq.TLO.Me.Moving() then return end
     if mq.TLO.SpawnCount(string.format('xtarhater radius %d zradius 50', config.get('CAMPRADIUS')))() > 0 then return end
     if petSpell.Mana > mq.TLO.Me.CurrentMana() then return end

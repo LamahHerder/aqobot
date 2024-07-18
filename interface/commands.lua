@@ -162,30 +162,28 @@ function commands.commandHandler(...)
     elseif opt == 'ADDCLICKY' then
         local clickyType = new_value
         local itemName = mq.TLO.Cursor()
-        local summonMinimum = nil
-        local useif = nil
         local nextIndex = 3
+        local clicky = {name=itemName, clickyType=clickyType, enabled=true}
         if not itemName then
-            itemName = args[3]
+            clicky.name = args[3]
             nextIndex = 4
         end
-        if args[nextIndex] then
-            if tonumber(args[nextIndex]) then
-                summonMinimum = tonumber(args[nextIndex])
-            else
-                useif = args[nextIndex]
-            end
-            nextIndex = nextIndex + 1
-        end
-        if args[nextIndex] then
-            if tonumber(args[nextIndex]) then
-                summonMinimum = tonumber(args[nextIndex])
-            else
-                useif = args[nextIndex]
+        for i=nextIndex,#args do
+            local match = args[i]:gmatch('[^/]+')
+            local first = match()
+            local secondstring = match()
+            if first and secondstring then
+                local second
+                if tonumber(secondstring) then second = tonumber(secondstring)
+                elseif secondstring == 'true' then second = true
+                elseif secondstring == 'false' then second = false
+                else second = secondstring end
+                clicky[first] = second
             end
         end
-        if itemName then
-            local clicky = {name=itemName, clickyType=clickyType, summonMinimum=summonMinimum, opt=useif, enabled=true}
+        if clicky.name then
+            -- printf('Add Clicky: name=%s, clickyType=%s, enabled=%s, summonMinimum=%s, alias=%s, condition=%s, usebelowpct=%s, opt=%s',
+            --     clicky.name, clicky.clickyType, clicky.enabled, clicky.summonMinimum, clicky.alias, clicky.condition, clicky.usebelowpct, clicky.opt)
             class:addClicky(clicky)
             class:saveSettings()
         else

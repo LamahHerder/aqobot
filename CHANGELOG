@@ -1,3 +1,8 @@
+# 2024/07/18
+- Kill familiars in managepet routine
+- Timer fixes for clicky items to avoid thinking a clicky was used when it was really not
+- AddClicky updates to accept any key/value arguments, e.g. /war addclicky defensive usebelowpct/50 condition/condFunctionName opt/USEFORTITUDE
+
 # 2024/07/16
 - lootnscoot / looted updated to latest
 - bard songs stop playing if group member out of camp radius
